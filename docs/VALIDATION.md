@@ -52,3 +52,33 @@ only 0.02 Å.
 for an exactly linear target, the collapse verdict, and observable
 reweighting.  These tests do not load MACE; they validate the estimator
 algebra.
+
+## Direct correlation c2 (Ornstein–Zernike)
+
+`validation/direct_correlation.py` and the OZ tests validate the inversion
+against analytic data:
+
+| Test | Result |
+|---|---|
+| Smooth analytic \(c(r)=-5e^{-r^2/2\sigma^2}\), \(\rho=0.2\) | max abs error **4.9e-13** |
+| Percus–Yevick hard spheres, \(\eta=0.4\), \(0.2<r<0.9\) | max abs error **2.1e-13** |
+| Ideal gas \(g=1\) | c2 = 0 exactly |
+| PY at \(r=0\) | Gibbs ringing from the discontinuous c(r); not used as a pass criterion |
+
+The reconstruction is therefore correct for smooth c2; the hard-sphere core
+needs a discontinuity-aware transform, not a finer grid alone.
+
+### Energy offset between force fields
+
+The MACE-OFF/MACE-POLAR total energies differ by a large constant
+(416.6 meV/atom in the 96-atom probe).  This offset:
+
+- is removed before exponentiating in reweighting; it cancels in normalized
+  weights;
+- **does not affect c2**, which is derived from g(r) and is invariant under a
+  constant energy shift;
+- shifts c1 by \(-\beta\Delta E\) (about \(-16.1\) for 416.6 meV/atom at 300 K),
+  so absolute c1 values must be aligned before comparing two force fields.
+
+This is why the PRL uses c2 matching from bulk g(r): it is insensitive to the
+energy zero and needs no inhomogeneous profiles.

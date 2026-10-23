@@ -132,8 +132,10 @@ different object and are named accordingly.
   \(\sigma_\beta=x_0\sqrt{\beta k N}\) reproduces the measured collapse as
   \(N\) grows.  Results: `validation/results/harmonic_validation.json` and
   `harmonic_validation.png`.
-- `tests/`: unit tests for weights, ESS, the linear fit, and observable
-  reweighting.
+- `tests/`: 12 unit tests for weights, ESS, the linear fit, observable
+  reweighting, and the OZ inversion (smooth analytic c and PY hard spheres).
+- `validation/direct_correlation.py`: OZ inversion against analytic c(r);
+  smooth case error 4.9e-13, PY hard-sphere smooth part 2.1e-13.
 
 ## Theory and citations
 
