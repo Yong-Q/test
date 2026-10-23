@@ -1,5 +1,12 @@
 # Obtaining c1 and c2 (PRL 134, 056103)
 
+> **Audit notice (2026-10-23):** The RDF shell defect was fixed in remote commit
+> `865f203`. Widom averaging and the OZ radial-grid convention still require correction.
+> O–O scalar OZ output must not be advertised as the full molecular
+> position-orientation c2. See the [audit](AUDIT_2026-10-23.md) and
+> [pending implementation plan](superpowers/plans/2026-10-23-polar-c1c2-validation.md).
+> The historical numerical outputs below are not certified labels.
+
 The PRL by Dijkman et al., *Learning Neural Free-Energy Functionals with
 Pair-Correlation Matching*, Phys. Rev. Lett. **134**, 056103 (2025),
 uses **c1 and c2 as functional derivatives of the excess free-energy

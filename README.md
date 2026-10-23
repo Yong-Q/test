@@ -1,5 +1,13 @@
 # off-polar-reweight
 
+## 新增检查与待完成修改（2026-10-23）
+
+- [问题证据与检查范围](docs/AUDIT_2026-10-23.md)：确认RDF球壳体积、Widom分母、径向网格和温度/统计解释等问题；包含最小反例。
+- [修复与验收计划](docs/superpowers/plans/2026-10-23-polar-c1c2-validation.md)：按P0/P1/P2列出具体文件、测试和新采样的阶段门槛。远端已完成RDF体积修复；其余修复、补充验收及新采样仍按清单跟踪。
+- [机器可读复算结果](validation/results/audit_20261023.json)及[CPU检查脚本](validation/audit_existing_results.py)：36帧ESS可复算，但这不认证现有c₁/c₂。重放时使用新的输出文件名，已有结果不会被覆盖。
+
+**当前结论：** 权重公式及已存ESS的计算正确；旧RDF与Widom路径存在已复现实现错误，其中RDF体积已由远端修复；Widom和OZ网格等问题仍待解决，现有标签尚未通过完整验收。36帧结果实际按334 K计算，源轨迹设定为300 K；1152原子ESS=1只覆盖6个早期帧，不能直接证明所有平衡后长轨迹均不可用。先按计划修复和验证，再判断能否导出目标POLAR标签。
+
 ## For review (2026-10-23)
 
 - [Chapter report (PDF, theory + experiments)](docs/reports/RESEARCH_REPORT.pdf) — 第一章理论，第二章测试。
@@ -8,14 +16,13 @@
 - [Review package index](docs/reports/README.md) — one-paragraph summary and key numbers.
 - [Detailed experiments](docs/EXPERIMENTS.md) — tables, caveats, reproduction commands.
 
-**Bottom line:** the reweighting identity and OZ inversion are correct, but
-the practical overlap fails: 96 atoms gives ESS 10.1% (marginal); a
-1,152-atom 5 ps early check (6 dump frames, 24 min) gives ESS = 1. The planned
-1 ns run was stopped after 5 ps because the engine sustains ~6.5 steps/s
-(≈80 h/ns); a 500 ps production run is in progress. Extrapolation and the
-\(\sqrt N\) scaling say more frames do not fix the overlap. For 1,000+ atoms
-use direct MACE-POLAR sampling, a delta-learned surrogate, or a PRL-style
-multi-density functional.
+The remote update `865f203` has corrected the RDF shell normalization and
+recomputed the stored c2 products. The audit linked above records the original
+baseline defects and the remaining Widom, radial-grid, ensemble and statistical
+validation work. The 1,152-atom ESS=1 record covers only six early equilibration
+frames. A separate 500 ps run is reported upstream; this documentation update
+does not verify that run's current progress or certify its labels.
+
 
 
 Reweight a **source** machine-learning interatomic potential trajectory

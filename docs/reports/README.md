@@ -1,5 +1,7 @@
 # Review package — MACE-OFF → MACE-POLAR c1/c2
 
+> **新增检查：** 请先读[问题记录](../AUDIT_2026-10-23.md)及[修复与验收计划](../superpowers/plans/2026-10-23-polar-c1c2-validation.md)。远端865f203已修复RDF体积并更新部分PDF；Widom、OZ网格和统计审核等修改仍待完成，当前c₁/c₂尚未认证。本次新增审计事项尚未全部反映到PDF中。
+
 **For:** teacher / reviewer  
 **Date:** 2026-10-23
 

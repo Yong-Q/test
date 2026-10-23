@@ -1,5 +1,12 @@
 # MACE-OFF → MACE-POLAR reweighting: theory and feasibility
 
+> **Audit notice (2026-10-23):** Section 3 contains an erf expression whose
+> monotonicity contradicts the accompanying interpretation. The ESS threshold,
+> entropy equivalence and categorical long-run failure claims also require
+> revision. The normalized importance-weight identity remains applicable under
+> its ensemble/overlap assumptions. See the [audit](AUDIT_2026-10-23.md) and
+> [pending correction plan](superpowers/plans/2026-10-23-polar-c1c2-validation.md).
+
 **Date:** 2026-10-23
 **Question:** can a long MACE-OFF trajectory be re-evaluated with MACE-POLAR on
 a finite frame set and reweighted to recover MACE-POLAR ensemble statistics?
