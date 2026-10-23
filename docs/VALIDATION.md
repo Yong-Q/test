@@ -44,7 +44,7 @@ This is the numerical version of the paper's \(\sqrt N\) argument: direct
 reweighting is intrinsically size-limited, even when the per-mode error is
 only 0.02 Å.
 
-![harmonic validation](results/harmonic_validation.png)
+![harmonic validation](reports/figures/harmonic_validation.png)
 
 ## Unit tests
 

@@ -51,6 +51,20 @@ but expensive teacher (128.99 µs/atom/step at 5,184 atoms) and MACE-OFF is a
 cheap source.  The package is kept standalone so the interface can be reused
 with other source/target ASE calculators.
 
+## Repository layout
+
+| Path | Purpose |
+|---|---|
+| `sampling/` | Core Python API: reweighting, trajectory, OZ c2, Widom c1, CLI |
+| `scripts/` | Thin CLI wrappers (`run_mace_off_traj.py`, `reweight_off_to_polar.py`, `monitor_ess.py`) |
+| `scripts/report/` | PDF generators (theory, experiment, chapter report) |
+| `tests/` | Unit tests for weights, ESS, OZ, linear fit |
+| `docs/` | Theory, experiments, workflow, validation, direct correlation |
+| `docs/reports/` | Review PDFs, report index, figure assets |
+| `examples/water96/` | 96-atom end-to-end feasibility run (trajectory + manifest + figure) |
+| `validation/` | Validation scripts and compact results (no large trajectories) |
+| `skills/external/` | Third-party documentation skill used to structure the report |
+
 ## Install
 
 ```bash

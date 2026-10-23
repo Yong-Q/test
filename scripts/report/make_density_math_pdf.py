@@ -47,7 +47,7 @@ def save(fig, pdf):
 
 
 def main():
-    out = HERE / "DENSITY_REWEIGHTING_MATH.pdf"
+    out = HERE.parents[1] / "docs/reports/THEORY_REPORT.pdf"
     with PdfPages(out) as pdf:
         # page 1
         fig = new_page("MACE-OFF → MACE-POLAR：密度、重加权与 c1/c2")

@@ -42,7 +42,7 @@ def save(fig, pdf):
 
 
 def main():
-    out = HERE.parent / "reports" / "RESEARCH_REPORT.pdf"
+    out = HERE.parents[1] / "docs/reports/RESEARCH_REPORT.pdf"
     with PdfPages(out) as pdf:
         # title / abstract
         fig = page("MACE-OFF → MACE-POLAR：c1/c2 重加权的理论与实验")
@@ -118,7 +118,7 @@ def main():
              "水，96 原子（32 H2O）与 1,152 原子（384 H2O）；密度 0.02 molecules/Å³；300 K；0.5 fs。\n"
              "源：原始 MACE-OFF23 medium（Symmetrix FP32 引擎）；目标：MACE-POLAR-1-M（FP64 单点）。", 9.8)
         text(fig, 0.74, "2.2 96 原子：重加权诊断", 11.5, "#333333", "bold")
-        image(fig, ROOT / "examples/water96/reweight/reweight_diagnostics.png", 0.38, 0.33)
+        image(fig, ROOT / "docs/reports/figures/reweight_diagnostics.png", 0.38, 0.33)
         text(fig, 0.34,
              "36 帧：ΔE 偏移 416.62 meV/atom，涨落 1.166 meV/atom，σβ=3.89，ESS=3.63/36=10.1%。"
              "slope/intercept=0.9452/−3606.84 eV，R²=0.9866，残差 1.03 meV/atom。", 9.3)
@@ -130,7 +130,7 @@ def main():
         save(fig, pdf)
 
         fig = page("第二章 实验：重加权 c2 与直接 POLAR 的对照")
-        image(fig, ROOT / "validation/results/forcefield_c1c2_water96/reweight_vs_direct/reweight_vs_direct.png", 0.50, 0.36)
+        image(fig, ROOT / "docs/reports/figures/reweight_vs_direct.png", 0.50, 0.36)
         text(fig, 0.46,
              "81 帧：σβ=3.31，ESS=2.09/81=2.6%。直接 POLAR vs OFF 的 c2 RMS=115.8；"
              "直接 POLAR vs 重加权的 RMS=121.0，最大差 528.7。", 9.6)
@@ -165,7 +165,7 @@ def main():
         text(fig, 0.845,
              "OZ 反演：光滑解析 c(r) 误差 4.9×10^-13；Percus–Yevick 硬球平滑段 2.1×10^-13；"
              "理想气体 c2=0；12 项单元测试通过。", 9.8)
-        image(fig, ROOT / "docs/results/harmonic_validation.png", 0.48, 0.30)
+        image(fig, ROOT / "docs/reports/figures/harmonic_validation.png", 0.48, 0.30)
         text(fig, 0.42, "2.6 尚未验证", 11.5, "#333333", "bold")
         text(fig, 0.385,
              "• 96 原子/10 ps 的 c2 定量形状；\n"

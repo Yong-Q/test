@@ -57,7 +57,7 @@ def main():
     slope = lin.get("slope", lin.get("c1"))
     intercept = lin.get("intercept_eV", lin.get("c2_total_eV"))
 
-    out = HERE / "DENSITY_REWEIGHTING_REPORT.pdf"
+    out = HERE.parents[1] / "docs/reports/EXPERIMENT_REPORT.pdf"
     with PdfPages(out) as pdf:
         # 1
         fig = new_page("MACE-OFF → MACE-POLAR：公式、重加权与实验问题")
