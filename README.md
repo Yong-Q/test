@@ -1,5 +1,20 @@
 # off-polar-reweight
 
+## For review (2026-10-23)
+
+- [Chapter report (PDF, theory + experiments)](docs/reports/RESEARCH_REPORT.pdf) — 第一章理论，第二章测试。
+- [Experiment report (PDF, 9 pages)](docs/reports/EXPERIMENT_REPORT.pdf) — formulas + current experiment problems.
+- [Theory report (PDF, 6 pages)](docs/reports/THEORY_REPORT.pdf) — statistical-mechanics derivation.
+- [Review package index](docs/reports/README.md) — one-paragraph summary and key numbers.
+- [Detailed experiments](docs/EXPERIMENTS.md) — tables, caveats, reproduction commands.
+
+**Bottom line:** the reweighting identity and OZ inversion are correct, but
+the practical overlap fails: 96 atoms gives ESS 10.1% (marginal); 1,152 atoms
+gives ESS = 1 (collapse). A 1 ns MACE-OFF run does not fix this. For 1,000+
+atoms use direct MACE-POLAR sampling, a delta-learned surrogate, or a
+PRL-style multi-density functional.
+
+
 Reweight a **source** machine-learning interatomic potential trajectory
 (MACE-OFF) to a **target** potential (MACE-POLAR) by free-energy perturbation
 / importance sampling, and diagnose whether the phase-space overlap is

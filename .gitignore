@@ -6,3 +6,9 @@ build/
 dist/
 runs/
 out/
+
+# local reference download / large trajectories
+.tmp_refs/
+validation/results/**/*.xyz
+validation/results/**/*.lammpstrj
+validation/results/**/*.log
