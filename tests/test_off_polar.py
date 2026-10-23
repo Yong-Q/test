@@ -1,7 +1,9 @@
 import math
 import numpy as np
+from ase import Atoms
 
-from sampling.off_polar import FrameRecord, ReweightConfig, ReweightResult
+from sampling.off_polar import (FrameRecord, OffPolarReweighter, ReweightConfig,
+                                ReweightResult)
 
 
 def make_result(deltas_meV_per_atom, n_atoms=96):
@@ -56,3 +58,33 @@ def test_linear_fit_recovers_slope():
 def test_observable_reweighting():
     r = make_result([0.0, 0.0, 0.0, 0.0])
     assert abs(r.reweight_observable([1.0, 2.0, 3.0, 4.0]) - 2.5) < 1e-12
+
+
+def random_gas(n=500, box=20.0, seed=7):
+    rng = np.random.default_rng(seed)
+    return Atoms("Ar" * n, positions=rng.random((n, 3)) * box,
+                 cell=[box, box, box], pbc=True)
+
+
+def test_rdf_ideal_gas_normalizes_to_one():
+    atoms = random_gas()
+    r, g = OffPolarReweighter.rdf([atoms], pair=("Ar", "Ar"),
+                                  rmax=9.0, bins=90)
+    m = (r > 1.5) & (r < 8.0)
+    # A random configuration has no structure: g(r) must average to 1.
+    assert abs(float(np.mean(g[m])) - 1.0) < 0.05
+
+
+def test_rdf_integral_matches_pair_count():
+    atoms = random_gas(n=300, box=18.0, seed=11)
+    r, g = OffPolarReweighter.rdf([atoms], pair=("Ar", "Ar"),
+                                  rmax=8.0, bins=80)
+    rho = 300.0 / 18.0 ** 3
+    dr = r[1] - r[0]
+    m = (r > 2.0) & (r < 4.0)
+    # 4*pi*rho*int r^2 g(r) dr equals the number of neighbours per atom.
+    integral = 4.0 * np.pi * rho * np.sum(r[m] ** 2 * g[m]) * dr
+    d = atoms.get_all_distances(mic=True)
+    iu = np.triu_indices(len(atoms), k=1)
+    raw = 2.0 * np.sum((d[iu] > 2.0) & (d[iu] < 4.0)) / len(atoms)
+    assert abs(integral - raw) / raw < 0.05

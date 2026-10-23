@@ -49,9 +49,9 @@ only 0.02 Å.
 ## Unit tests
 
 `tests/` checks the normalized weights, ESS bounds, the linear slope recovery
-for an exactly linear target, the collapse verdict, and observable
-reweighting.  These tests do not load MACE; they validate the estimator
-algebra.
+for an exactly linear target, the collapse verdict, observable reweighting,
+the OZ inversion, and the RDF normalization.  These tests do not load MACE;
+they validate the estimator algebra.  14 tests pass.
 
 ## Direct correlation c2 (Ornstein–Zernike)
 
@@ -63,6 +63,8 @@ against analytic data:
 | Smooth analytic \(c(r)=-5e^{-r^2/2\sigma^2}\), \(\rho=0.2\) | max abs error **4.9e-13** |
 | Percus–Yevick hard spheres, \(\eta=0.4\), \(0.2<r<0.9\) | max abs error **2.1e-13** |
 | Ideal gas \(g=1\) | c2 = 0 exactly |
+| RDF ideal gas | \(\langle g\rangle=1\) within 5% |
+| RDF coordination | \(4\pi\rho\int r^2g\,dr\) matches raw pair count within 5% |
 | PY at \(r=0\) | Gibbs ringing from the discontinuous c(r); not used as a pass criterion |
 
 The reconstruction is therefore correct for smooth c2; the hard-sphere core

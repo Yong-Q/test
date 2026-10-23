@@ -173,8 +173,8 @@ def main():
              f"R² = {rw['linear']['r2']:.4f}，残差 = {rw['linear']['residual_rms_meV_per_atom']:.2f} meV/atom\n"
              f"力 MAE = {rw['force_mae_meV_per_A_mean']:.1f} meV/Å", 10)
         text(fig, 0.27,
-             "c2 的两套曲线差异很大，但这是 96 原子/10 ps 的噪声与有限尺寸，\n"
-             "不能当成真实的 MACE-OFF vs MACE-POLAR 结构差。", 10, "#333333")
+             "修正 RDF 归一化后，两套 c2 很接近（RMS 0.20）；但 96 原子/10 ps 的噪声\n"
+             "与有限尺寸仍占主导，不能当成真实的 MACE-OFF vs MACE-POLAR 结构差。", 10, "#333333")
         save(fig, pdf)
 
         # 7
@@ -185,8 +185,8 @@ def main():
              "生产应使用 L≥2r_cut；该密度下至少 ~104 个原子，建议 128/192。", 9.8)
         text(fig, 0.76, "2. 轨迹太短", 11, "#333333", "bold")
         text(fig, 0.725,
-             "10 ps 的 g(r) 噪声很大；c2 出现 -293~1337 的摆动。\n"
-             "至少需要 100 ps，定量 c2 建议 5–10 ns。", 9.8)
+             "10 ps 的 g(r) 仍有噪声；修正归一化后 c2≈[-4.8, 3.5]\n"
+             "（旧版 -293~1337 是 RDF 球壳体积 bug 伪影）。至少需要 100 ps。", 9.8)
         text(fig, 0.64, "3. 温度控制偏弱", 11, "#333333", "bold")
         text(fig, 0.605,
              "恒温器设定 300 K，但生产段平均瞬时温度约 334 K；\n"

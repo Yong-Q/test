@@ -68,10 +68,12 @@ off-polar-reweight --traj off_traj_prod.xyz \
 ## Direct correlation functions (PRL c1/c2)
 
 `c2(r)` was extracted from this trajectory with the Ornstein–Zernike
-inversion (`off-polar-c2`, output in `c2/`).  The 96-atom/5 ps RDF is **too
-noisy for a quantitative c2**: the plotted values swing between −47 and +117
-because the low-k limit and the finite box dominate.  Use 5–10 ns and a box
-with \(L\gtrsim2r_{\rm cut}\) before interpreting c2.  c1 is a constant for
+inversion (`off-polar-c2`, output in `c2/`).  After the 2026-10-23 RDF
+normalization fix (shell volume \(4\pi/3(r_{\rm hi}^3-r_{\rm lo}^3)\), not the
+squared-radius difference), the 96-atom/5 ps c2 lies in about [−4.6, 2.7].
+It is still **not quantitative**: the finite box caps the transform at
+\(L/2=5.85\) Å and 5 ps leaves visible noise.  Use ≥100 ps and a box with
+\(L\gtrsim2r_{\rm cut}\) before interpreting c2.  c1 is a constant for
 a homogeneous fluid and requires Widom insertion or a functional derivative;
 the utility `c1_from_widom` is provided but was not run on this dense probe.
 

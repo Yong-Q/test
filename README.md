@@ -9,10 +9,13 @@
 - [Detailed experiments](docs/EXPERIMENTS.md) — tables, caveats, reproduction commands.
 
 **Bottom line:** the reweighting identity and OZ inversion are correct, but
-the practical overlap fails: 96 atoms gives ESS 10.1% (marginal); 1,152 atoms
-gives ESS = 1 (collapse). A 1 ns MACE-OFF run does not fix this. For 1,000+
-atoms use direct MACE-POLAR sampling, a delta-learned surrogate, or a
-PRL-style multi-density functional.
+the practical overlap fails: 96 atoms gives ESS 10.1% (marginal); a
+1,152-atom 5 ps early check (6 dump frames, 24 min) gives ESS = 1. The planned
+1 ns run was stopped after 5 ps because the engine sustains ~6.5 steps/s
+(≈80 h/ns); a 500 ps production run is in progress. Extrapolation and the
+\(\sqrt N\) scaling say more frames do not fix the overlap. For 1,000+ atoms
+use direct MACE-POLAR sampling, a delta-learned surrogate, or a PRL-style
+multi-density functional.
 
 
 Reweight a **source** machine-learning interatomic potential trajectory
@@ -161,10 +164,14 @@ different object and are named accordingly.
   \(\sigma_\beta=x_0\sqrt{\beta k N}\) reproduces the measured collapse as
   \(N\) grows.  Results: `validation/results/harmonic_validation.json` and
   `harmonic_validation.png`.
-- `tests/`: 12 unit tests for weights, ESS, the linear fit, observable
-  reweighting, and the OZ inversion (smooth analytic c and PY hard spheres).
+- `tests/`: 14 unit tests for weights, ESS, the linear fit, observable
+  reweighting, the OZ inversion (smooth analytic c and PY hard spheres), and
+  the RDF normalization (ideal gas \(g=1\); coordination number).
 - `validation/direct_correlation.py`: OZ inversion against analytic c(r);
   smooth case error 4.9e-13, PY hard-sphere smooth part 2.1e-13.
+- Note (2026-10-23): the RDF shell volume was corrected from a squared-radius
+  difference to the cubic one; stored c2 products were repaired with
+  `validation/repair_rdf_normalization.py`.  Old c2 ranges are invalid.
 
 ## Theory and citations
 

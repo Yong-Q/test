@@ -49,14 +49,18 @@ The module implements this:
 from sampling.off_polar import OffPolarReweighter
 from sampling.direct_correlation import c2_from_g
 
-r, g = OffPolarReweighter.rdf(frames, pair=("O", "O"), rmax=8.0, bins=80)
+# Keep rmax <= L/2: beyond that the minimum-image convention folds g(r).
+rmax = min(8.0, 0.5 * min(frames[0].cell.cellpar()[:3]))
+r, g = OffPolarReweighter.rdf(frames, pair=("O", "O"), rmax=rmax, bins=80)
 rho = n_O / volume
 r, c2r, k, c2k = c2_from_g(r, g, rho)
 ```
 
 `sampling/direct_correlation.py` also provides
 `direct_correlation_report(frames, rho, outdir)`, which writes `c2.json` and
-`c2.png`.
+`c2.png`.  For a 96-atom box (\(L=11.7\) Å) this means `rmax=5.75` Å, not 8 Å.
+The RDF shell volume was corrected on 2026-10-23; see
+[`EXPERIMENTS.md`](EXPERIMENTS.md) §3.5.
 
 ## c1 from a trajectory
 

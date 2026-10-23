@@ -7,8 +7,9 @@ dist/
 runs/
 out/
 
-# local reference download / large trajectories
+# local reference download / large trajectories / render scratch
 .tmp_refs/
+.tmp/
 validation/results/**/*.xyz
 validation/results/**/*.lammpstrj
 validation/results/**/*.log

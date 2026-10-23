@@ -375,7 +375,10 @@ class OffPolarReweighter:
             h, _ = np.histogram(r, bins=edges)
             hist += w * h
             vol = atoms.get_volume()
-            shell = 4.0 * np.pi * (edges[1:] ** 2 - edges[:-1] ** 2) / 3.0
+            # Spherical-shell volume 4*pi/3*(r_{i+1}^3 - r_i^3).  Using the
+            # squared-radius difference here would under-count every shell by
+            # ~3r/2 and inflate g(r) by the same factor.
+            shell = 4.0 * np.pi * (edges[1:] ** 3 - edges[:-1] ** 3) / 3.0
             norm += w * expected * shell / vol
         g = hist / np.maximum(norm, 1e-30)
         mid = 0.5 * (edges[1:] + edges[:-1])

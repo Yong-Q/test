@@ -107,8 +107,13 @@ def main() -> int:
                     w /= w.sum()
                     ess = float(1.0 / np.sum(w ** 2))
                     sigma = float(b.std(ddof=1))
+                    # Store the normalized running weights, not the 0.0
+                    # placeholder written when the row was appended.
+                    for i, wi in enumerate(w):
+                        rows[i] = (rows[i][0], rows[i][1], rows[i][2], float(wi))
                 else:
                     ess, sigma = 1.0, 0.0
+                    rows[0] = (rows[0][0], rows[0][1], rows[0][2], 1.0)
                 print(f"[ess] step={ts} dE/atom={d/len(atoms)*1000:.3f} meV "
                       f"sigma_beta={sigma:.2f} ESS={ess:.2f}/{len(rows)} "
                       f"({100*ess/len(rows):.1f}%)", flush=True)
