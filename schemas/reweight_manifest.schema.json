@@ -25,10 +25,10 @@
     "ess_fraction": {"type": "number", "minimum": 0, "maximum": 1},
     "linear": {
       "type": "object",
-      "required": ["c1", "c2_total_eV", "r2", "residual_rms_meV_per_atom"],
+      "required": ["slope", "intercept_eV", "r2", "residual_rms_meV_per_atom"],
       "properties": {
-        "c1": {"type": "number"},
-        "c2_total_eV": {"type": "number"},
+        "slope": {"type": "number"},
+        "intercept_eV": {"type": "number"},
         "r2": {"type": "number"},
         "residual_rms_meV_per_atom": {"type": "number", "minimum": 0}
       }

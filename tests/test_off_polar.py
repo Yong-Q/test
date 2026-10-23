@@ -49,7 +49,7 @@ def test_linear_fit_recovers_slope():
             e_target_eV=float(2.0 * e + 5.0), dE_total_eV=float(e + 5.0),
             dE_meV_per_atom=float((e + 5.0) / 96 * 1000),
             beta_dE=float(cfg.beta_eV_inv * (e + 5.0)), weight=1.0 / 20))
-    assert abs(r.linear_c1 - 2.0) < 1e-10
+    assert abs(r.linear_slope - 2.0) < 1e-10
     assert abs(r.linear_r2 - 1.0) < 1e-10
 
 

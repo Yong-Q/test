@@ -23,6 +23,7 @@ test = ["pytest>=8"]
 [project.scripts]
 off-polar-run = "sampling.cli:run_main"
 off-polar-reweight = "sampling.cli:reweight_main"
+off-polar-c2 = "sampling.cli:c2_main"
 
 [tool.setuptools.packages.find]
 include = ["sampling*"]

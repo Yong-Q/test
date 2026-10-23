@@ -10,6 +10,7 @@ REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
+from sampling.direct_correlation import direct_correlation_report
 from sampling.off_polar import GRAPH_LONG_RANGE, OffPolarReweighter, ReweightConfig
 from sampling.trajectory import TrajectoryConfig, read_structure, run_langevin
 
@@ -82,4 +83,29 @@ def reweight_main(argv: list[str] | None = None) -> int:
         "delta_meV_per_atom_std", "sigma_beta", "ess", "ess_fraction",
         "verdict")}, indent=1))
     print(f"[reweight] wrote {path}")
+    return 0
+
+
+def c2_main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(prog="off-polar-c2")
+    ap.add_argument("--traj", required=True)
+    ap.add_argument("--outdir", required=True)
+    ap.add_argument("--pair", nargs=2, default=["O", "O"])
+    ap.add_argument("--rho", type=float, default=None,
+                    help="number density of the first element (A^-3); "
+                         "inferred from the frame if omitted")
+    ap.add_argument("--rmax", type=float, default=8.0)
+    ap.add_argument("--bins", type=int, default=80)
+    args = ap.parse_args(argv)
+
+    import ase.io
+    frames = list(ase.io.iread(args.traj, format="extxyz"))
+    if args.rho is None:
+        n = sum(1 for s in frames[0].get_chemical_symbols()
+                if s == args.pair[0])
+        args.rho = n / frames[0].get_volume()
+    res = direct_correlation_report(frames, args.rho, args.outdir,
+                                    rmax=args.rmax, bins=args.bins)
+    print(f"[c2] rho={args.rho:.6g} A^-3, frames={len(frames)}, "
+          f"c2(r) min/max={res['c2_r'].min():.4g}/{res['c2_r'].max():.4g}")
     return 0

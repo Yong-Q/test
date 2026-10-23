@@ -4,7 +4,7 @@
 **Question:** can a long MACE-OFF trajectory be re-evaluated with MACE-POLAR on
 a finite frame set and reweighted to recover MACE-POLAR ensemble statistics?
 How many frames are needed for 1 ns, and what is the role of a constant
-offset / linear `c1, c2` correction?
+offset / linear `slope, intercept` correction?
 **Scope:** theory, a practical protocol, and a short end-to-end feasibility run.
 No production 1 ns trajectory was launched for this note.
 
@@ -44,30 +44,34 @@ The only question is statistical: do the OFF samples cover the regions that
 dominate the POLAR average? The MBAR/BAR estimators [4,5] are the
 lower-variance alternatives when several overlapping states are available.
 
-## 2. What `c1, c2` can and cannot do
+## 2. What the linear slope/intercept can and cannot do
+
+> Naming note: these are the slope \(s\) and intercept \(b\) of a linear
+> energy fit.  The PRL direct correlation functions \(c_1, c_2\) are different
+> objects; see `DIRECT_CORRELATION.md`.
 
 If one assumes a global linear relation
 
 \[
-V_{\rm POLAR}(x)=c_1V_{\rm OFF}(x)+c_2,
+V_{\rm POLAR}(x)=s\,V_{\rm OFF}(x)+b,
 \]
 
 then
 
 \[
-e^{-\beta(c_1V_{\rm OFF}+c_2-V_{\rm OFF})}
-=e^{-\beta(c_1-1)V_{\rm OFF}}\,e^{-\beta c_2}.
+e^{-\beta(sV_{\rm OFF}+b-V_{\rm OFF})}
+=e^{-\beta(s-1)V_{\rm OFF}}\,e^{-\beta b}.
 \]
 
-- **`c2` is a constant offset. It cancels in every normalized ensemble
+- **`b` is a constant offset. It cancels in every normalized ensemble
   average.** It shifts the absolute energy and the free-energy zero, but not
   RDFs, densities, or average energies.
-- **`c1` rescales the source Hamiltonian**, i.e. it acts like an effective
-  temperature \(T/c_1\). A global `c1` is not a substitute for the
+- **`s` rescales the source Hamiltonian**, i.e. it acts like an effective
+  temperature \(T/s\). A global slope is not a substitute for the
   configuration-dependent residual.
-- In practice a linear fit \(V_{\rm POLAR}\approx c_1V_{\rm OFF}+c_2\) leaves a
+- In practice a linear fit \(V_{\rm POLAR}\approx sV_{\rm OFF}+b\) leaves a
   residual \(\delta V(x)\). The correct weight is
-  \(e^{-\beta[(c_1-1)V_{\rm OFF}(x)+\delta V(x)]}\); dropping
+  \(e^{-\beta[(s-1)V_{\rm OFF}(x)+\delta V(x)]}\); dropping
   \(\delta V\) is an approximation, not an identity. The decomposition is
   just the FEP identity [1] rewritten around a fitted linear response; the
   residual term is what the mean-energy-gap approximation of [6] retains in
@@ -153,7 +157,7 @@ variable or when the residual fluctuation is genuinely negligible.
    MACE-OFF calculator (~0.22 s/step at 1,296 atoms in this container).
 3. **Diagnose before trusting.** Compute per-frame \(\Delta V\), its
    per-atom mean and std, \(\sigma_\beta=\mathrm{std}(\beta\Delta V)\),
-   ESS, the linear fit \((c_1,c_2,R^2)\), and the force MAE. Also compare
+   ESS, the linear fit \((s,b,R^2)\), and the force MAE. Also compare
    OFF and POLAR RDFs/densities.
 4. **Decision gate.**
    - \(\sigma_\beta\le3\) and ESS ≥ 10 % → direct reweighting is usable.
@@ -162,8 +166,8 @@ variable or when the residual fluctuation is genuinely negligible.
    - \(\sigma_\beta\gg5\) or ESS < 1 % → do not report reweighted ensemble
      averages. Run short MACE-POLAR trajectories or use a distilled model for
      the long-time statistics.
-5. **Never use a global constant offset as the correction.** `c2` cancels;
-   `c1` only helps if the residual is negligible and must be validated on a
+5. **Never use a global constant offset as the correction.** `b` cancels;
+   `s` only helps if the residual is negligible and must be validated on a
    held-out set of frames.
 
 ### 5.1 Formula provenance
@@ -172,7 +176,7 @@ variable or when the residual fluctuation is genuinely negligible.
 |---|---|
 | Importance-sampling identity and normalized weights | [1] Eq. (1)–(2); [2] |
 | Free-energy perturbation \(\Delta A=-k_BT\ln\langle e^{-\beta\Delta V}\rangle\) | [1] |
-| Constant offset cancels; `c1` acts as an effective temperature | algebra from [1]; linear-response discussion in [6] |
+| Constant offset cancels; slope `s` acts as an effective temperature | algebra from [1]; linear-response discussion in [6] |
 | \(\sigma_\beta\) coverage and the \(\sigma_\beta\lesssim3\) reliability rule | [6] SI §7–8 |
 | ESS \(=(\sum w)^2/\sum w^2\) | standard IS diagnostic, used in [5,6] |
 | Gaussian and mean-energy-gap corrections | [6] §4.2.3–4.2.4 |
@@ -195,7 +199,7 @@ re-evaluated. This is a feasibility probe, not a 1 ns production run.
 | \(\sigma_\beta\) | **3.89** |
 | ESS | **3.63 / 36 = 10.1 %** |
 | verdict | **marginal** |
-| \(c_1\) / \(c_2\) | 0.9452 / −3,606.84 eV |
+| slope \(s\) / intercept \(b\) | 0.9452 / −3,606.84 eV |
 | \(R^2\) / residual | 0.9866 / 1.03 meV/atom |
 | force MAE | 104.7 meV/Å |
 
@@ -209,7 +213,7 @@ At 96 atoms the direct exponential average is already marginal: only ~4
 effective frames survive, despite the constant offset being removed.  The
 linear fit is highly correlated (\(R^2=0.987\)) but its residual (1.03
 meV/atom) is almost as large as the total fluctuation (1.17 meV/atom), so a
-global `c1, c2` correction does not fix the overlap.
+global slope/intercept correction does not fix the overlap.
 
 Assuming independent local fluctuations, \(\sigma_\beta\propto\sqrt N\) gives
 **14.3 at 1,296 atoms** and **28.6 at 5,184 atoms**; both are far beyond the

@@ -26,7 +26,7 @@ exponential average is limited by the overlap:
 
 For \(\sigma_\beta\gtrsim3\) the weights are dominated by a few frames and
 direct reweighting collapses.  The repository therefore reports
-\(\sigma_\beta\), ESS, a linear `c1, c2` fit, and a verdict instead of silently
+\(\sigma_\beta\), ESS, a linear `slope, intercept` fit, and a verdict instead of silently
 returning a biased average.
 
 ## Why this repository exists
@@ -71,7 +71,7 @@ result.write("out/")
 instances to the constructor if you do not use MACE.
 
 The output `reweight_manifest.json` contains model paths and SHA-256 hashes,
-temperature, per-frame ΔV, \(\sigma_\beta\), ESS, the `c1,c2` fit, force MAE,
+temperature, per-frame ΔV, \(\sigma_\beta\), ESS, the `slope,intercept` fit, force MAE,
 and a verdict (`usable`, `marginal`, `collapse`).  `reweight_frames.csv` and
 `reweight_diagnostics.png` are written alongside it.
 
@@ -115,6 +115,16 @@ ESS = 3.6/36 = 10.1 %, verdict **marginal**; the linear fit has
 5,184 atoms, so direct reweighting is not usable at production sizes.
 Full detail: [`examples/water96/README.md`](examples/water96/README.md).
 
+## Direct correlation functions (PRL c1/c2)
+
+The PRL (Dijkman et al., PRL 134, 056103 (2025)) uses c1 and c2 as the
+one- and two-body direct correlation functions, not as linear-fit
+coefficients.  `sampling/direct_correlation.py` extracts c2(r) from a bulk
+g(r) through the Ornstein–Zernike relation and provides a Widom-insertion
+utility for the constant c1.  See [`docs/DIRECT_CORRELATION.md`](docs/DIRECT_CORRELATION.md).
+The reweighting manifest's `linear.slope` and `linear.intercept_eV` are a
+different object and are named accordingly.
+
 ## Validation
 
 - `validation/harmonic.py`: exact 1D and N-mode harmonic tests.  The
@@ -141,7 +151,7 @@ See [`docs/THEORY.md`](docs/THEORY.md).  Core references:
 ## Limits
 
 - The estimator is exact only for equilibrated source samples with overlap.
-- A global `c2` offset cancels; a global `c1` is only an effective-temperature
+- A global intercept offset cancels; a global slope is only an effective-temperature
   rescaling.  The residual \(\delta V(x)\) must be retained.
 - For large \(N\), \(\sigma_\beta\) grows approximately as \(\sqrt{N}\); direct
   reweighting should be expected to fail even when per-atom errors look small.

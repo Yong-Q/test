@@ -37,8 +37,8 @@ off-polar-reweight --traj off_traj_prod.xyz \
 | \(\sigma_\beta=\mathrm{std}(\beta\Delta E)\) | **3.89** |
 | ESS | **3.63 / 36 = 10.1 %** |
 | verdict | **marginal** |
-| linear \(c_1\) | 0.9452 |
-| linear \(c_2\) (total) | −3,606.84 eV |
+| linear slope | 0.9452 |
+| linear intercept (total) | −3,606.84 eV |
 | \(R^2\) | 0.9866 |
 | residual RMS | 1.03 meV/atom |
 | force MAE (source vs target) | 104.7 meV/Å |
@@ -48,11 +48,11 @@ off-polar-reweight --traj off_traj_prod.xyz \
 ## Interpretation
 
 - The constant offset (416.6 meV/atom) is **irrelevant** after normalization;
-  `c2` cancels exactly.
+  the intercept cancels exactly.
 - The fluctuation is what matters: 1.166 meV/atom at 96 atoms already gives
   \(\sigma_\beta=3.89\) and only ~4 effective frames.
 - The linear fit has a high \(R^2=0.987\), but its residual is 1.03 meV/atom,
-  i.e. almost as large as the total fluctuation.  A global `c1` correction
+  i.e. almost as large as the total fluctuation.  A global slope correction
   therefore does **not** rescue the reweighting; the residual must stay in the
   weight.
 - Assuming independent local fluctuations, \(\sigma_\beta\propto\sqrt N\):
@@ -64,6 +64,19 @@ off-polar-reweight --traj off_traj_prod.xyz \
   ESS ≈ 1 frame.
 - The force MAE (105 meV/Å) confirms that the two potentials are not close
   enough for a stable exponential average on this state point.
+
+## Direct correlation functions (PRL c1/c2)
+
+`c2(r)` was extracted from this trajectory with the Ornstein–Zernike
+inversion (`off-polar-c2`, output in `c2/`).  The 96-atom/5 ps RDF is **too
+noisy for a quantitative c2**: the plotted values swing between −47 and +117
+because the low-k limit and the finite box dominate.  Use 5–10 ns and a box
+with \(L\gtrsim2r_{\rm cut}\) before interpreting c2.  c1 is a constant for
+a homogeneous fluid and requires Widom insertion or a functional derivative;
+the utility `c1_from_widom` is provided but was not run on this dense probe.
+
+These PRL c1/c2 are **not** the linear `slope/intercept` in the reweighting
+manifest.  See [`docs/DIRECT_CORRELATION.md`](../../docs/DIRECT_CORRELATION.md).
 
 ## What to do instead
 

@@ -144,11 +144,11 @@ class ReweightResult:
         return c1, c2, r2, resid_atom
 
     @property
-    def linear_c1(self) -> float:
+    def linear_slope(self) -> float:
         return self._linear_fit()[0]
 
     @property
-    def linear_c2_total_eV(self) -> float:
+    def linear_intercept_eV(self) -> float:
         return self._linear_fit()[1]
 
     @property
@@ -186,8 +186,8 @@ class ReweightResult:
             "ess": self.ess,
             "ess_fraction": self.ess_fraction,
             "linear": {
-                "c1": self.linear_c1,
-                "c2_total_eV": self.linear_c2_total_eV,
+                "slope": self.linear_slope,
+                "intercept_eV": self.linear_intercept_eV,
                 "r2": self.linear_r2,
                 "residual_rms_meV_per_atom":
                     self.linear_residual_rms_meV_per_atom,
@@ -244,7 +244,7 @@ class ReweightResult:
         ax[1, 0].plot(eo, ep, "o", ms=4)
         ax[1, 0].set_xlabel("source E (eV/atom)")
         ax[1, 0].set_ylabel("target E (eV/atom)")
-        ax[1, 0].set_title(f"c1={self.linear_c1:.5f}, R²={self.linear_r2:.4f}")
+        ax[1, 0].set_title(f"slope={self.linear_slope:.5f}, R²={self.linear_r2:.4f}")
         if self.rdf_source is not None and self.rdf_weighted is not None:
             ax[1, 1].plot(*self.rdf_source, label="source")
             ax[1, 1].plot(*self.rdf_weighted, "--",
