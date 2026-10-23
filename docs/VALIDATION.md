@@ -48,7 +48,7 @@ only 0.02 Å.
 
 ## Unit tests
 
-`tests/` checks the normalized weights, ESS bounds, the linear `c1` recovery
+`tests/` checks the normalized weights, ESS bounds, the linear slope recovery
 for an exactly linear target, the collapse verdict, and observable
 reweighting.  These tests do not load MACE; they validate the estimator
 algebra.
