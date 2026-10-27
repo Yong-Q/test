@@ -3,7 +3,7 @@
 被审计对象：
 
 - **A**：`docs/reports/REWEIGHT_VARIANCE_2026-10-27.pdf`（XeLaTeX，6 页，501 帧 OFF→POLAR）
-- **B**：`docs/REWEIGHT_VARIANCE_2026-10-27.pdf`（5 页，四组数据量化）
+- **B**：`docs/REWEIGHT_VARIANCE_DATA_2026-10-27.pdf`（数据附录，四组数据量化）
 
 方法：逐条检查 A 的公式与数值；用 `frames_501_total_energies.csv` 独立复算；
 用 `papers/` 中的原文核对文献陈述。
@@ -65,8 +65,7 @@ A 表中的每个数都能从 CSV 精确复现（T=300 K，β=1/(k_BT)，分母 
 - **A 是主推导**：公式链完整、假设写得清楚、数值可复现。
 - **B 只保留“四组数据量化表”**（OFF 1,152、学生 1,152、96 原子、气相）与
   Chatterjee–Diaconis 的对照；其余推导与 A 重复。
-- 建议：A 修正第 1 条并补第 2 条；B 改名为 `REWEIGHT_VARIANCE_DATA_2026-10-27.pdf`
-  或直接并入 A，避免两个同名 PDF。
+- 建议：A 修正第 1 条并补第 2 条；B 已改名为 `REWEIGHT_VARIANCE_DATA_2026-10-27.pdf`，作为 A 的数据附录。
 
 ## 5 结论
 

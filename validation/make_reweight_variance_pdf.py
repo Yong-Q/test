@@ -16,7 +16,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
-OUT = REPO / "docs" / "REWEIGHT_VARIANCE_2026-10-27.pdf"
+OUT = REPO / "docs" / "REWEIGHT_VARIANCE_DATA_2026-10-27.pdf"
 FONT = Path("/workspace/group/shared/bza/.fonts/NotoSansSC.ttf")
 if FONT.exists():
     font_manager.fontManager.addfont(str(FONT))
@@ -96,10 +96,10 @@ with PdfPages(OUT) as pdf:
     # ---------------- page 1 ----------------
     fig = plt.figure(figsize=PAGE)
     y = 0.90
-    fig.text(0.07, y, "重加权因子方差与有效样本量", fontsize=18,
+    fig.text(0.07, y, "重加权因子方差与 ESS：四组数据量化", fontsize=18,
              fontweight="bold")
     y -= 0.035
-    fig.text(0.07, y, "从权重二阶矩推导 ESS，并量化本项目的四组数据",
+    fig.text(0.07, y, "数据附录：从权重二阶矩推导 ESS，并量化本项目的四组数据",
              fontsize=11, color=GREY)
     y -= 0.020
     fig.text(0.07, y, "2026 年 10 月 27 日 · OFF/POLAR 重加权审计",
@@ -187,11 +187,20 @@ with PdfPages(OUT) as pdf:
     y = para(fig, y, "若误差是相干的（例如整体密度/参考能漂移），"
              "Var(ΔU) = N²v_c，衰减更快：")
     y = eq(fig, y, r"$\frac{N_{\mathrm{eff}}}{N}\approx e^{-\beta^2N^2v_c}$")
-    y = para(fig, y, "两种情况下 ESS 都随 N 指数下降。把 96 原子的 σ_β=1.87 按 "
+    y = para(fig, y, "在局域贡献近似独立或短程相关成立时，两种情况下 ESS 都随 N 指数下降。"
+             "把 96 原子的 σ_β=1.87 按 "
              "√N 外推到 1,152 原子，得到 σ_β≈6.5，与实测 8.0 同量级；"
              "按相干外推则更大。")
 
-    y = head(fig, y, "6  本项目四组数据的量化")
+    y = head(fig, y, "6  独立的样本量判据（Chatterjee–Diaconis）")
+    y = para(fig, y, "除方差/ESS 外，原始论文还给出：准确估计所需样本量约为 "
+             "n ~ exp(KL(ν‖μ))，KL 是目标相对源的 KL 散度。")
+    y = eq(fig, y, r"$n\sim e^{D(\nu\|\mu)},\qquad "
+                    r"D(\nu\|\mu)=\frac{s^2}{2}\ \mathrm{(Gaussian)}$")
+    y = para(fig, y, "当前 s=13.7616，s²/2=94.69，即 n~1.3e41；501 帧远小于该尺度。"
+             "两条判据（ESS 的 χ² 与样本量的 KL）独立指向同一结论。")
+
+    y = head(fig, y, "7  本项目四组数据的量化")
     lines = [
         ("体系", "N", "σ_β", "CV_w²", "CV_w", "ESS/N", "Gaussian ESS/N"),
     ]
@@ -221,7 +230,7 @@ with PdfPages(OUT) as pdf:
     # ---------------- page 4 ----------------
     fig = plt.figure(figsize=PAGE)
     y = 0.95
-    y = head(fig, y, "7  权重集中度")
+    y = head(fig, y, "8  权重集中度")
     y = para(fig, y, "对 1,152 原子数据直接统计归一化权重：")
     y = para(fig, y, "OFF→POLAR：最大单帧 59.6 %，前 3 帧 93.2 %，前 5 帧 99.1 %。")
     y = para(fig, y, "学生→POLAR：最大单帧 91.5 %，前 5 帧 98.1 %，第 277 帧的 "
@@ -230,20 +239,20 @@ with PdfPages(OUT) as pdf:
              "因为 1,152 原子帧是 OFF23 采的、对学生是分布外；单帧离群即可让 ESS 更低。"
              "这说明 ESS 不是 σ_β 的单调函数，必须同时报告最大权重和前 k 帧占比。")
 
-    y = head(fig, y, "8  估计量的偏差")
+    y = head(fig, y, "9  估计量的偏差")
     y = para(fig, y, "自归一化估计的偏差是 O(1/N_eff)。N_eff ≈ 1 时，"
              "任何重加权平均实际上由一帧决定，偏差与统计误差同量级，结果没有意义。"
              "因此不能用“加权后的曲线看起来平滑”判断可用性，必须看 N_eff、"
              "最大权重和分块误差。")
 
-    y = head(fig, y, "9  实用诊断")
+    y = head(fig, y, "10  实用诊断")
     y = para(fig, y, "1) 报告 σ_β、CV_w、N_eff、最大单帧权重和前 3/5 帧占比；"
              "2) 按时间块重算权重与观测量，给出分块误差；"
              "3) ESS ≥ 10 % 只作启发式门槛，最终看观测量与独立目标轨迹的偏差；"
              "4) 生产尺寸不要用一步重加权：直接学生采样，或采样 λ 中间势后用 "
              "BAR/MBAR 合并相邻状态。")
 
-    y = head(fig, y, "10  结论")
+    y = head(fig, y, "11  结论")
     y = para(fig, y, "权重方差是重加权可行性的核心量：1,152 原子时 CV_w ≈ 15–21，"
              "ESS 只剩 0.2–0.5 %；96 原子 CV_w ≈ 1.1，ESS ≈ 44 %；"
              "气相 CV_w ≈ 0.14，ESS ≈ 98 %。ESS 随 N 指数衰减，"

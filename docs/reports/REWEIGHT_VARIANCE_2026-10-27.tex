@@ -44,7 +44,7 @@ $\widehat{\ESS}/n$ & \csname EssFraction\endcsname\\
 \end{align}
 将 $e^{-\beta U_H}=e^{-\beta U_L}e^{-\beta\Delta U}$ 代入，得
 \begin{align}
-q(x)&=e^{-\beta\Delta U(x)},\\
+q(x)&=e^{-\beta\Delta U(x)}\quad\text{（未归一化比值；整体常数在自归一化中抵消）},\\
 \E_L[q]&=\frac1{Z_L}\int e^{-\beta U_H(x)}dx=\frac{Z_H}{Z_L},\\
 \E_H[A]&=\frac{\int A(x)e^{-\beta U_L(x)}q(x)dx}{Z_H}
  =\frac{\E_L[qA]}{\E_L[q]}.
@@ -130,6 +130,20 @@ a_i=e^{-\beta(\Delta U_i-\Delta U_{\min})},\quad
 \end{align}
 当前 $s=13.7616$，这个高斯总体近似给出 $\ESS/n\approx5.66\times10^{-83}$，远小于经验值 0.004688。它不是 501 帧的 ESS 计算结果；极端尾部在有限样本中几乎不可检验，高斯模型本身也未获证明。不能把高斯外推当精确的所需帧数预测。
 
+\subsection{独立的样本量判据（Chatterjee--Diaconis）}
+除方差/ESS 之外，Chatterjee 与 Diaconis 给出另一条独立判据：准确估计所需样本量约为
+\begin{equation}
+ n\sim\exp\!\left(D(\nu\,\|\,\mu)\right),
+\end{equation}
+其中 $D(\nu\|\mu)$ 是目标 $\nu=p_H$ 相对源 $\mu=p_L$ 的 KL 散度。
+对 Gaussian $X=\beta\Delta U\sim\mathcal N(m,s^2)$，
+\begin{equation}
+ D(\nu\|\mu)=\frac{s^2}{2},\qquad n\sim e^{s^2/2}.
+\end{equation}
+当前 $s=13.7616$，$s^2/2=94.69$，即 $n\sim1.3\times10^{41}$。
+501 帧远小于该尺度。ESS 的 $\chi^2$ 判据与样本量的 KL 判据独立指向同一结论：
+当前 501 帧的一步重加权不能可靠恢复目标统计。
+
 单帧总能量差的标准差为 0.355765 eV，约 $13.76k_BT$。除以固定原子数后仅为 0.308824 meV/atom，但玻尔兹曼因子必须使用\textbf{整盒总能量差}。将每原子能量差直接放入指数会人为抬高 ESS。$\sqrt{N}$ 波动标度还要求局域贡献近似独立或短程相关，不是任意系统都成立的恒等式。
 
 增加样本在适当条件下可改善估计，不能宣称 ESS 必然永远不增长。当前结果支持的是：直接对这 501 帧重加权高度集中，可靠恢复目标统计性质尚未成立。
@@ -199,6 +213,7 @@ Herzog 等的 MLPT 工作讨论源轨迹到目标理论的重加权，并在重�
 \begin{thebibliography}{9}
 \bibitem{herzog} B. Herzog et al., Assessing the Accuracy of Machine Learning Thermodynamic Perturbation Theory: Density Functional Theory and Beyond. JCTC 18, 1382--1394 (2022). \href{https://doi.org/10.1021/acs.jctc.1c01034}{DOI: 10.1021/acs.jctc.1c01034}.
 \bibitem{hilpert} T. Hilpert and G. Kresse, Accurate Thermophysical Properties of Water using Machine-Learned Potentials. JCP 164, 194504 (2026). \href{https://doi.org/10.1063/5.0325444}{DOI: 10.1063/5.0325444}; \href{https://arxiv.org/html/2601.21103v1}{开放全文}.
+\bibitem{cd} S. Chatterjee and P. Diaconis, The Sample Size Required in Importance Sampling. Ann. Appl. Probab. 28, 1099--1135 (2018). \href{https://doi.org/10.1214/17-AAP1326}{DOI: 10.1214/17-AAP1326}.
 \bibitem{ess} V. Elvira, L. Martino and C. P. Robert, Rethinking the Effective Sample Size. International Statistical Review (2022). \href{https://doi.org/10.1111/insr.12500}{DOI: 10.1111/insr.12500}.
 \end{thebibliography}
 \end{document}
