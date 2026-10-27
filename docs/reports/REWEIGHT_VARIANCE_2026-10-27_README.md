@@ -1,5 +1,7 @@
 # 重加权方差与详细推导（2026-10-27，独立新增）
 
+> **历史版本入口。** 当前请读[修订PDF](REWEIGHT_VARIANCE_REVISED_2026-10-27.pdf)及[报告索引](README.md)。本页保留501帧复算数值；旧PDF未改动，旧LaTeX文件已作为修订源码的兼容入口。
+
 - [6 页 PDF](REWEIGHT_VARIANCE_2026-10-27.pdf)
 - [LaTeX 源码](REWEIGHT_VARIANCE_2026-10-27.tex)
 - [完整复算结果](../results/reweight_variance_20261027.json)
@@ -26,7 +28,7 @@
 
 Python 程序只用标准库，读取原始 CSV，并以 `open('x')` 写入 JSON 与数值 TeX 文件：已有文件时主动拒绝覆盖。若需重新运行，应先复制整个工作目录并在副本内另设输出路径，保留原始结果。
 
-从仓库根目录使用 XeLaTeX 编译源文件；源码引用 `docs/results/reweight_variance_20261027_numbers.tex`。当前字体为 `/home/qiuyong/fonts/arial.ttf` 及 `1611458310630572.ttf`（微软雅黑）；其他服务器请在源码副本中改为当地可用的拉丁和 CJK 字体。将 `-output-directory` 指向新的构建目录，避免覆盖已有 PDF。
+当前请通过 `validation/make_reweight_variance_pdf.py` 构建修订版；不要以默认旧文件名直接编译旧入口，避免覆盖历史 PDF。原数值源文件为源码引用 `docs/results/reweight_variance_20261027_numbers.tex`。当前字体为 `/home/qiuyong/fonts/arial.ttf` 及 `1611458310630572.ttf`（微软雅黑）；其他服务器请在源码副本中改为当地可用的拉丁和 CJK 字体。将 `-output-directory` 指向新的构建目录，避免覆盖已有 PDF。
 
 本次数值复算 Slurm 109819 成功；其中 PDF 阶段因节点缺少 fontconfig 失败。CPU 排版改放 gpu 分区（只申请 1 CPU，未申请 GPU），109821 因字体名解析失败；改用明确的字体文件路径后，109823 成功生成 6 页 PDF。失败日志保留在本地 audits 目录。旧 PDF 的 SHA256 前后全部一致。
 

@@ -8,27 +8,19 @@
 
 **2026-10-27更新：** 501帧ESS独立复算为2.34867；另修复独立500ps脚本的RDF配对归一化，并发现源轨迹z向明显不均匀。论文中的逐帧Δ能量校正、重叠不足时重新采样，以及后续验收事项，统一列于[最新TODO](docs/TODO_OFF_POLAR_2026-10-27.md)；[复算数据与诊断图](docs/results/20261027_off_polar_audit/)单独保存，旧结果不覆盖。
 
-**学生→POLAR（2026-10-27）：** 1,152 原子一步重加权 σ_β=8.02、ESS 0.24 %（最大单帧权重 91.5 %）；96 原子 ESS≈44 %，气相 98 %。生产尺寸判为不可用，详见[ESS 报告](docs/ESS_STUDENT_TO_POLAR_2026-10-27.md)。
+**2026-10-27结论修订：** 1152原子的“POLAR−学生势”评分使用的是OFF23旧轨迹，只能报告指数集中度，**不能据此判定学生自采样到POLAR的ESS或生产尺寸失败**。96原子仅19帧，混合验证集也不能当单一平衡系综。OFF→POLAR的501帧经验ESS=2.34867，但源势重算与MD日志去常数后仍有约0.030eV差异，需先核对实现。Gaussian模型的10^41不是实际所需帧数。见[修订结论](docs/ESS_STUDENT_TO_POLAR_2026-10-27.md)与[逐篇公式核对](docs/reports/FORMULA_CROSSCHECK_PRIMARY_PDFS_2026-10-27.md)。
 
-## 文献中的逐帧校正与重加权（为什么他们能工作）
+## 文献中的逐帧校正与重加权
 
-| 工作 | 做法 | 关键条件 | 与本项目（OFF→POLAR / 学生→POLAR）的差别 |
-|---|---|---|---|
-| Herzog et al., JCTC 18, 1382 (2022) | MLPT：学习构型相关 ΔU 再配权；MLMC：用校正势 U_corr=U_L+f(R) **重新采样**，再对残差配权 | 约 19,000 构型中选 200 训练 + 25 测试；目标是吸附焓；ΔU 是同一体系两个电子结构层级之间的小修正 | 我们跨两个不同势（长程静电不同），c₁/c₂ 是整盒结构量，不是局部吸附能 |
-| Chehaibou et al., JCTC 15, 6333 (2019) | 用 MLPT 计算 RPA 吸附焓 | 同类小扰动 + 局部观测量 | 同上 |
-| Hilpert & Kresse, JCP 164, 194504 (2026) | 63 个水分子、292 K，5,000 个去相关构型，逐帧 DFT−MLIP ΔU，对体积配权 | MACE 的 ESS≈4,200、KbP<800；目标与 MLIP 都是同一个 RPBE-D3 DFT | 同目标势；我们不是同目标，且 1,152 原子使 ΔU 方差随 N 增长 |
-| Thaler & Zavadlav, Nat Commun (2021) | 可微轨迹重加权，从实验数据学势 | 重加权嵌入训练循环，误差可反向传播 | 我们是固定模型的事后诊断 |
-| Shirts & Chodera, JCP 129, 124105 (2008) | MBAR：多个平衡态联合估计 | 需要多个中间态/λ 的**真实采样**，相邻态重叠高 | 我们只有单源单目标；需按 [Task 6](docs/superpowers/plans/2026-10-23-polar-c1c2-validation.md) 补 λ 中间势 |
+| 工作 | 与本项目直接相关的做法 | 必须保留的条件 |
+|---|---|---|
+| Chehaibou 2019 / Herzog 2022，MLPT与MLMC | 用少量目标单点学习真实ΔU；目标统计仍按正确源分布配权；重叠不足时重新采样 | 不能任意消掉逐帧真实差值；不能把不同电子结构方法一概当小扰动。2019式(18)符号不一致见公式核对 |
+| Hilpert & Kresse 2026，MLP→DFT水 | 63水、5000构型；292K的MACE ESS=4200、KbP ESS=720；323K的KbP ESS=70 | 势函数接近同一RPBE-D3目标，不能直接推广到OFF23→POLAR；截尾会引入偏差 |
+| Thaler & Zavadlav 2021，DiffTRe | 结构观测量可微重加权训练；熵ESS不足时刷新参考轨迹 | 熵ESS不同于平方权重ESS；必须匹配实际采样源 |
+| Shirts & Chodera 2008，MBAR | 合并多个实际采样状态，可估计Ni=0的目标态 | 已采样分布需覆盖目标；补能量评分不会创造缺失构型 |
+| Chatterjee & Diaconis 2018 | 带尾部条件的KL样本量尺度 | 不可将501帧标准差代入未经验证的高斯模型后宣称真实需要10^41帧 |
 
-共同点：(i) 扰动小或同目标（同一 DFT 泛函的 MLIP），不是两个不同势；(ii) 用中间态/BAR/MBAR 或校正势**重新采样**，而不是一步跳；(iii) 体系小或样本大（数千去相关构型、ESS 数千）；(iv) 观测量是局部量/自由能，不是整盒 c₁/c₂。我们的 1,152 原子一步重加权 ESS 只有 0.24–0.47 %，正是不满足这些条件的后果；详见[ESS 报告](docs/ESS_STUDENT_TO_POLAR_2026-10-27.md)。
-
-引用：
-
-1. Herzog et al. *Assessing the Accuracy of Machine Learning Thermodynamic Perturbation Theory: Density Functional Theory and Beyond.* JCTC 18, 1382–1394 (2022). [DOI](https://doi.org/10.1021/acs.jctc.1c01034) · [arXiv 全文](https://arxiv.org/html/2110.06818)
-2. Chehaibou et al. *Computing RPA Adsorption Enthalpies by Machine Learning Thermodynamic Perturbation Theory.* JCTC 15, 6333–6342 (2019). [DOI](https://doi.org/10.1021/acs.jctc.9b00782)
-3. Hilpert & Kresse. *Accurate thermophysical properties of water using machine-learned potentials.* JCP 164, 194504 (2026). [DOI](https://doi.org/10.1063/5.0325444) · [arXiv 全文](https://arxiv.org/html/2601.21103v1)
-4. Thaler & Zavadlav. *Learning neural network potentials from experimental data via Differentiable Trajectory Reweighting.* Nat Commun (2021). [论文](https://www.nature.com/articles/s41467-021-27241-4)
-5. Shirts & Chodera. *Statistically optimal analysis of samples from multiple equilibrium states.* JCP 129, 124105 (2008). [DOI](https://doi.org/10.1063/1.2978177) · [开放全文](https://pmc.ncbi.nlm.nih.gov/articles/PMC2671659/)
+推导、原文页码、数值与限制见[公式核对](docs/reports/FORMULA_CROSSCHECK_PRIMARY_PDFS_2026-10-27.md)。
 
 ## 方法
 
@@ -136,10 +128,10 @@ print("weight ESS:", result.ess, "sigma_beta:", result.sigma_beta)
 | Widom 与分子理想参考 | 分母错误已复现；加权插入与刚性/柔性参考约定待完成 |
 | OZ 网格、有限尺寸与误差 | 网格和真实轨迹流程仍待修正/验收；解析测试通过不能替代这些检查 |
 | 目标 POLAR c₁/c₂ 标签 | 尚未完成独立目标参照、观测量不确定度和完整资格审核 |
-| 重加权因子方差推导（2026-10-27） | 从权重二阶矩推导 ESS；CV_w=15–21（1,152 原子）、1.1（96 原子）、0.14（气相），对应 ESS 0.2–0.5 %、44 %、98 %。理论推导见 [PDF](docs/reports/REWEIGHT_VARIANCE_2026-10-27.pdf)，四组数据量化见 [数据附录](docs/REWEIGHT_VARIANCE_DATA_2026-10-27.pdf)；Chatterjee–Diaconis 判据 n~exp(KL) 给出 n~1.3e41（Gaussian） |
-| 学生→POLAR 重加权 ESS（2026-10-27） | 1,152 原子 σ_β=8.02、ESS 0.24 %（最大单帧权重 91.5 %）；96 原子 ESS≈44 %，气相 98 %。生产尺寸一步重加权判为不可用；详见 [ESS 报告](docs/ESS_STUDENT_TO_POLAR_2026-10-27.md) |
+| 重加权因子方差推导（修订） | OFF旧帧的经验CV²=212.311856、Kish ESS=2.348674；不是总体散度测量。见[修订PDF](docs/reports/REWEIGHT_VARIANCE_REVISED_2026-10-27.pdf)；旧PDF保留为历史版本 |
+| 学生势评分（修订） | 1152原子来自OFF旧帧，撤回学生生产尺寸不可用结论；96原子仅19帧，验证集未认证为平衡样本。见[报告](docs/ESS_STUDENT_TO_POLAR_2026-10-27.md) |
 
-后续顺序是：先修实现与输入约定，再重算已有数据，然后用匹配的 OFF/POLAR 采样验证。若直接重加权仍无法满足观测量精度要求，再实际采样中间混合势或更接近 POLAR 的参考势。BAR/MBAR 需要有重叠的新采样，给原来的同一批帧增加几个能量评分不能补出缺失构型。
+后续顺序是：先修实现与输入约定，再重算已有数据，然后用匹配的 OFF/POLAR 采样验证。若直接重加权仍无法满足观测量精度要求，再实际采样中间混合势或更接近 POLAR 的参考势。在当前覆盖不足的情况下，需要实际的桥接或改进源势采样；MBAR一般允许未直接采样的目标态，但给同一批旧帧增加能量评分不能补出缺失构型。
 
 ## 文档与目录
 

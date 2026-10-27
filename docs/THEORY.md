@@ -1,5 +1,13 @@
 # MACE-OFF → MACE-POLAR reweighting: theory and feasibility
 
+> **Superseded interpretation (2026-10-27):** This is a historical note. Its
+> categorical ESS saturation, size-failure, entropy equivalence and coverage
+> claims are not current conclusions. Read the [revised report](reports/REWEIGHT_VARIANCE_REVISED_2026-10-27.pdf)
+> and [primary-PDF formula check](reports/FORMULA_CROSSCHECK_PRIMARY_PDFS_2026-10-27.md).
+> The student scores on OFF frames are not a student-ensemble ESS. The actual
+> MD/re-evaluation energy consistency remains unresolved; no c1/c2 certification
+> follows from the stored diagnostics.
+
 > **Audit notice (2026-10-23):** Section 3 contains an erf expression whose
 > monotonicity contradicts the accompanying interpretation. The ESS threshold,
 > entropy equivalence and categorical long-run failure claims also require
