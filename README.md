@@ -44,12 +44,7 @@ $$
 
 目标平衡平均由加权统计估计：
 
-$$
-\langle A\rangle_{\mathrm{target}}
-\approx\sum_i\widetilde w_i A(X_i),
-\qquad
-N_{\mathrm{eff,w}}=\frac{1}{\sum_i\widetilde w_i^2}.
-$$
+$$\langle A\rangle_{\mathrm{target}}\approx\sum_i\widetilde w_i A(X_i),\qquad N_{\mathrm{eff},w}=\frac{1}{\sum_i\widetilde w_i^2}.$$
 
 能量差使用**整帧总能量**。若两体系的外场不同，还需包含外场总能量差；相同外场会抵消。计算指数前减去最大的对数权重可避免溢出，固定粒子数下的全局能量常数也会在归一化时抵消。
 
