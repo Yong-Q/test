@@ -28,11 +28,14 @@ def main() -> int:
     ap.add_argument("--structure", required=True)
     ap.add_argument("--off-model", required=True)
     ap.add_argument("--polar-model", required=True)
+    ap.add_argument("--student-model", default=None,
+                    help="optional distilled MACE-Polar surrogate to compare")
     ap.add_argument("--temperature", type=float, default=300.0)
     ap.add_argument("--ps", type=float, default=10.0)
     ap.add_argument("--equil-ps", type=float, default=1.0)
     ap.add_argument("--frame-ps", type=float, default=0.1)
     ap.add_argument("--n-widom", type=int, default=100)
+    ap.add_argument("--rmax", type=float, default=8.0)
     ap.add_argument("--outdir", required=True)
     args = ap.parse_args()
 
@@ -48,6 +51,10 @@ def main() -> int:
         "MACE-POLAR": mace_polar(model=args.polar_model, device="cuda",
                                  default_dtype="float64"),
     }
+    if args.student_model:
+        calcs["MACE-STUDENT"] = MACECalculator(
+            model_paths=args.student_model, device="cuda",
+            default_dtype="float32")
     payload = {"temperature_K": args.temperature, "rho_A3": rho,
                "n_atoms": len(atoms), "ps": args.ps,
                "equil_ps": args.equil_ps, "frame_ps": args.frame_ps,
@@ -64,7 +71,7 @@ def main() -> int:
         # discard the first 10 frames (~1 ps) again if needed
         frames = frames[10:]
         r, g = OffPolarReweighter.rdf(frames, pair=("O", "O"),
-                                      rmax=8.0, bins=80)
+                                      rmax=args.rmax, bins=80)
         r, c2r, k, c2k = c2_from_g(r, g, rho)
         c1 = c1_from_widom(frames[::5][:20], calc, molecule("H2O"),
                            args.temperature, n_insertions=args.n_widom,
@@ -82,6 +89,23 @@ def main() -> int:
             payload["systems"][label], indent=1))
         print(f"[gpu] {label}: c1={c1['c1_ex']:.4f} "
               f"c2 min/max={c2r.min():.3f}/{c2r.max():.3f}", flush=True)
+
+    # Pairwise differences against the target (POLAR) on the shared grid.
+    if "MACE-POLAR" in payload["systems"]:
+        ref = payload["systems"]["MACE-POLAR"]
+        gref = np.asarray(ref["g_OO"]); c2ref = np.asarray(ref["c2_r"])
+        payload["vs_polar"] = {}
+        for label, sysd in payload["systems"].items():
+            if label == "MACE-POLAR":
+                continue
+            g = np.asarray(sysd["g_OO"]); c2 = np.asarray(sysd["c2_r"])
+            payload["vs_polar"][label] = {
+                "g_rms": float(np.sqrt(np.mean((g - gref) ** 2))),
+                "g_max_abs": float(np.max(np.abs(g - gref))),
+                "c2_rms": float(np.sqrt(np.mean((c2 - c2ref) ** 2))),
+                "c2_max_abs": float(np.max(np.abs(c2 - c2ref))),
+                "c1_delta": float(sysd["c1"]["c1_ex"] - ref["c1"]["c1_ex"]),
+            }
 
     import matplotlib
     matplotlib.use("Agg")
