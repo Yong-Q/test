@@ -8,6 +8,28 @@
 
 **2026-10-27更新：** 501帧ESS独立复算为2.34867；另修复独立500ps脚本的RDF配对归一化，并发现源轨迹z向明显不均匀。论文中的逐帧Δ能量校正、重叠不足时重新采样，以及后续验收事项，统一列于[最新TODO](docs/TODO_OFF_POLAR_2026-10-27.md)；[复算数据与诊断图](docs/results/20261027_off_polar_audit/)单独保存，旧结果不覆盖。
 
+**学生→POLAR（2026-10-27）：** 1,152 原子一步重加权 σ_β=8.02、ESS 0.24 %（最大单帧权重 91.5 %）；96 原子 ESS≈44 %，气相 98 %。生产尺寸判为不可用，详见[ESS 报告](docs/ESS_STUDENT_TO_POLAR_2026-10-27.md)。
+
+## 文献中的逐帧校正与重加权（为什么他们能工作）
+
+| 工作 | 做法 | 关键条件 | 与本项目（OFF→POLAR / 学生→POLAR）的差别 |
+|---|---|---|---|
+| Herzog et al., JCTC 18, 1382 (2022) | MLPT：学习构型相关 ΔU 再配权；MLMC：用校正势 U_corr=U_L+f(R) **重新采样**，再对残差配权 | 约 19,000 构型中选 200 训练 + 25 测试；目标是吸附焓；ΔU 是同一体系两个电子结构层级之间的小修正 | 我们跨两个不同势（长程静电不同），c₁/c₂ 是整盒结构量，不是局部吸附能 |
+| Chehaibou et al., JCTC 15, 6333 (2019) | 用 MLPT 计算 RPA 吸附焓 | 同类小扰动 + 局部观测量 | 同上 |
+| Hilpert & Kresse, JCP 164, 194504 (2026) | 63 个水分子、292 K，5,000 个去相关构型，逐帧 DFT−MLIP ΔU，对体积配权 | MACE 的 ESS≈4,200、KbP<800；目标与 MLIP 都是同一个 RPBE-D3 DFT | 同目标势；我们不是同目标，且 1,152 原子使 ΔU 方差随 N 增长 |
+| Thaler & Zavadlav, Nat Commun (2021) | 可微轨迹重加权，从实验数据学势 | 重加权嵌入训练循环，误差可反向传播 | 我们是固定模型的事后诊断 |
+| Shirts & Chodera, JCP 129, 124105 (2008) | MBAR：多个平衡态联合估计 | 需要多个中间态/λ 的**真实采样**，相邻态重叠高 | 我们只有单源单目标；需按 [Task 6](docs/superpowers/plans/2026-10-23-polar-c1c2-validation.md) 补 λ 中间势 |
+
+共同点：(i) 扰动小或同目标（同一 DFT 泛函的 MLIP），不是两个不同势；(ii) 用中间态/BAR/MBAR 或校正势**重新采样**，而不是一步跳；(iii) 体系小或样本大（数千去相关构型、ESS 数千）；(iv) 观测量是局部量/自由能，不是整盒 c₁/c₂。我们的 1,152 原子一步重加权 ESS 只有 0.24–0.47 %，正是不满足这些条件的后果；详见[ESS 报告](docs/ESS_STUDENT_TO_POLAR_2026-10-27.md)。
+
+引用：
+
+1. Herzog et al. *Assessing the Accuracy of Machine Learning Thermodynamic Perturbation Theory: Density Functional Theory and Beyond.* JCTC 18, 1382–1394 (2022). [DOI](https://doi.org/10.1021/acs.jctc.1c01034) · [arXiv 全文](https://arxiv.org/html/2110.06818)
+2. Chehaibou et al. *Computing RPA Adsorption Enthalpies by Machine Learning Thermodynamic Perturbation Theory.* JCTC 15, 6333–6342 (2019). [DOI](https://doi.org/10.1021/acs.jctc.9b00782)
+3. Hilpert & Kresse. *Accurate thermophysical properties of water using machine-learned potentials.* JCP 164, 194504 (2026). [DOI](https://doi.org/10.1063/5.0325444) · [arXiv 全文](https://arxiv.org/html/2601.21103v1)
+4. Thaler & Zavadlav. *Learning neural network potentials from experimental data via Differentiable Trajectory Reweighting.* Nat Commun (2021). [论文](https://www.nature.com/articles/s41467-021-27241-4)
+5. Shirts & Chodera. *Statistically optimal analysis of samples from multiple equilibrium states.* JCP 129, 124105 (2008). [DOI](https://doi.org/10.1063/1.2978177) · [开放全文](https://pmc.ncbi.nlm.nih.gov/articles/PMC2671659/)
+
 ## 方法
 
 对于相同温度、粒子数、体积和约束下的源体系与目标体系，在第 $i$ 帧完整构型 $X_i$ 上计算总势能差：
