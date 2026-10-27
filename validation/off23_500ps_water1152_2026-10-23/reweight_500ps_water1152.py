@@ -86,7 +86,8 @@ def oo_rdf_weighted(frames, weights, rmax=8.0, nbins=80):
         h, _ = np.histogram(r, bins=edges)
         hist += w * h.astype(np.float64)
         # ideal-gas pair density for this frame
-        norm += w * (n_o * (n_o - 1) / vol)
+        # The upper triangle counts each unordered O-O pair once.
+        norm += w * (0.5 * n_o * (n_o - 1) / vol)
     r = 0.5 * (edges[1:] + edges[:-1])
     g = hist / (norm * shell) if norm > 0 else np.zeros_like(r)
     return r, g
