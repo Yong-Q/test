@@ -102,7 +102,9 @@ def main():
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--force", action="store_true",
-                    help="also compute the force-assisted density (needs GPU)")
+                    help="also compute the force-assisted density")
+    ap.add_argument("--force-device", default="cuda",
+                    choices=["cuda", "cpu"])
     args = ap.parse_args()
     energies = []
     with open(PKG / "frames_501_total_energies.csv") as fh:
@@ -226,12 +228,12 @@ def main():
         return
 
     # force-assisted density on a subset
-    step = 5
+    step = 25
     sel = np.arange(0, len(frames), step)
     import subprocess as sp
     import time as _t
     t0 = _t.time()
-    while _t.time() - t0 < 7200:
+    while args.force_device == "cuda" and _t.time() - t0 < 7200:
         out = sp.run(["nvidia-smi", "--query-gpu=memory.free",
                       "--format=csv,noheader,nounits"],
                      capture_output=True, text=True)
@@ -244,7 +246,9 @@ def main():
     model = ("/workspace/group/shared/bza/task3_sampling_database/mlip/models/"
              "mace-polar/MACE-POLAR-1-M.model")
     from ase import Atoms
-    calc = mace_polar(model=model, device="cuda", default_dtype="float64")
+    dtype = "float64" if args.force_device == "cuda" else "float32"
+    calc = mace_polar(model=model, device=args.force_device,
+                      default_dtype=dtype)
     rho_force = []
     rho_cnt_sub = []
     for n, k in enumerate(sel):

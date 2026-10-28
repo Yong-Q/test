@@ -9,5 +9,7 @@
   "offset_spread_rms": 0.10121186587920648,
   "n_dense": 501,
   "n_sparse": 101
- }
+ },
+ "rho_rms_count_vs_force": 0.18788949803751265,
+ "rho_block_err_force_mean": 0.21906989860196735
 }
