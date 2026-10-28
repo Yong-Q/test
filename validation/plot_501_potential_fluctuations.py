@@ -134,3 +134,56 @@ fig3.tight_layout()
 fig3.savefig(OUT.with_name(OUT.name + "_single.png"), bbox_inches="tight")
 fig3.savefig(OUT.with_name(OUT.name + "_single.pdf"), bbox_inches="tight")
 print("wrote single-panel figure")
+
+
+# ------------------------------------------------------------------ bath view
+import re
+log = PKG / "log.production_1fs"
+step_t, temp_t = [], []
+if log.exists():
+    for line in log.read_text().splitlines():
+        m = re.match(r"^\s*(\d+)\s+([\d.]+)\s+(-?[\d.]+)\s*$", line)
+        if m:
+            step_t.append(int(m.group(1)) * 0.001)
+            temp_t.append(float(m.group(2)))
+step_t = np.array(step_t)
+temp_t = np.array(temp_t)
+
+fig4, (a4, b4) = plt.subplots(2, 1, figsize=(9.0, 5.0), sharex=True,
+                              gridspec_kw={"height_ratios": [3, 1.2]})
+a4.plot(t, (e_off - e_off.mean()) / n * 1e3, lw=0.7, color=BLUE,
+        label="MACE-OFF23")
+a4.plot(t, (e_pol - e_pol.mean()) / n * 1e3, lw=0.7, color=ORANGE,
+        label="MACE-POLAR")
+a4.plot(t, (dU - dU.mean()) / n * 1e3, lw=1.1, color="#009E73",
+        label="$\\Delta U$ (POLAR $-$ OFF23)")
+for val, col in [(e_off.std() / n * 1e3, BLUE),
+                 (dU.std() / n * 1e3, "#009E73")]:
+    a4.axhline(val, color=col, ls=":", lw=0.8)
+    a4.axhline(-val, color=col, ls=":", lw=0.8)
+a4.fill_between(t, -e_off.std() / n * 1e3, e_off.std() / n * 1e3,
+                color=BLUE, alpha=0.07)
+a4.set_ylabel("(E - <E>)/N (meV atom$^{-1}$)")
+a4.set_title("Potential-energy fluctuations and the heat-bath envelope")
+a4.legend(frameon=False, ncol=3, fontsize=7.5, loc="upper right")
+a4.grid(alpha=0.2)
+a4.text(0.01, 0.03,
+        "dotted: $\\pm1\\sigma$ of E_OFF (blue) and $\\Delta U$ (green); "
+        "shaded: $\\pm1\\sigma$ thermal envelope",
+        transform=a4.transAxes, fontsize=7.2, va="bottom")
+if len(step_t):
+    b4.plot(step_t, temp_t, lw=0.7, color="#CC79A7")
+    b4.axhline(temp_t.mean(), color=GREY, ls="--", lw=0.8)
+    b4.set_ylabel("T (K)")
+    b4.set_xlabel("time (ps)")
+    b4.set_title(f"Thermostat temperature (mean {temp_t.mean():.1f} K, "
+                 f"std {temp_t.std():.1f} K)", fontsize=9)
+    b4.grid(alpha=0.2)
+    b4.spines["top"].set_visible(False)
+    b4.spines["right"].set_visible(False)
+a4.spines["top"].set_visible(False)
+a4.spines["right"].set_visible(False)
+fig4.tight_layout()
+fig4.savefig(OUT.with_name(OUT.name + "_bath.png"), bbox_inches="tight")
+fig4.savefig(OUT.with_name(OUT.name + "_bath.pdf"), bbox_inches="tight")
+print("wrote bath figure")
