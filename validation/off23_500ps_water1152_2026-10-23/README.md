@@ -136,14 +136,20 @@ The per-frame weights and total energies are in `reweight_frames.json` and
 
 ## 5. Potential-energy fluctuations
 
-`potential_fluctuations_501.png` / `.pdf` (script
-`validation/plot_501_potential_fluctuations.py`):
+`potential_fluctuations_501.png` / `.pdf` (two panels),
+`_single.png` (all three curves on one axis) and `_combined.png` (curves +
+fluctuation-magnitude bars); script
+`validation/plot_501_potential_fluctuations.py`:
 
 - left: (E - <E>)/N for MACE-OFF23 and MACE-POLAR over the 501 frames; the
   two curves nearly overlap because the common thermal fluctuation dominates;
 - right: ΔU = E_POLAR - E_OFF, mean **480.864 eV**, std **0.356 eV**
   (0.309 meV/atom).  The first ~10 ps show the initial equilibration
   transient; production statistics use all 501 frames unless stated.
+- comparison: `std(E_OFF)/N = 1.562`, `std(E_POLAR)/N = 1.473`,
+  `std(dU)/N = 0.309 meV/atom`; the thermal fluctuation is ~5x the
+  energy-difference fluctuation (the two potentials correlate at 0.981).
+  The whole-box `beta*dU` still has sigma = 13.76.
 
 ## 5. Logs and other files
 

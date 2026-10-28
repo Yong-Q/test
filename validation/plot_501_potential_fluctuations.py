@@ -69,3 +69,68 @@ fig.savefig(OUT.with_suffix(".pdf"), bbox_inches="tight")
 print("wrote", OUT.with_suffix(".png"))
 print(f"mean dU {dU.mean():.4f} eV  std {dU.std():.4f} eV  "
       f"per atom std {dU.std()/n*1e3:.4f} meV/atom")
+
+
+# ------------------------------------------------------------------ combined
+fig2, ax2 = plt.subplots(1, 2, figsize=(10.5, 3.8))
+a = ax2[0]
+a.plot(t, (e_off - e_off.mean()) / n * 1e3, lw=0.7, color=BLUE,
+       label="MACE-OFF23")
+a.plot(t, (e_pol - e_pol.mean()) / n * 1e3, lw=0.7, color=ORANGE,
+       label="MACE-POLAR")
+a.plot(t, (dU - dU.mean()) / n * 1e3, lw=1.0, color="#009E73",
+       label="$\\Delta U$ (POLAR $-$ OFF23)")
+a.set_xlabel("time (ps)")
+a.set_ylabel("(E - <E>)/N (meV atom$^{-1}$)")
+a.set_title("Thermal fluctuations vs energy difference")
+a.legend(frameon=False, fontsize=7.5)
+a.grid(alpha=0.2)
+
+b = ax2[1]
+vals = [e_off.std() / n * 1e3, e_pol.std() / n * 1e3, dU.std() / n * 1e3]
+cols = [BLUE, ORANGE, "#009E73"]
+bars = b.bar(["E_OFF", "E_POLAR", "$\\Delta U$"], vals, color=cols,
+             width=0.6)
+for bar, v in zip(bars, vals):
+    b.text(bar.get_x() + bar.get_width() / 2, v * 1.15, f"{v:.3f}",
+           ha="center", fontsize=8)
+b.set_ylabel("std (meV atom$^{-1}$)")
+b.set_yscale("log")
+b.set_title("Fluctuation magnitude")
+b.set_ylim(top=max(vals) * 3.0)
+b.text(0.97, 0.06,
+       f"whole-box $\\beta\\Delta U$: $\\sigma$ = {dU.std()/(8.617333262e-5*300):.2f}",
+       transform=b.transAxes, fontsize=8, va="bottom", ha="right")
+b.grid(alpha=0.2, axis="y")
+for a_ in ax2:
+    a_.spines["top"].set_visible(False)
+    a_.spines["right"].set_visible(False)
+fig2.tight_layout()
+fig2.savefig(OUT.with_name(OUT.name + "_combined.png"), bbox_inches="tight")
+fig2.savefig(OUT.with_name(OUT.name + "_combined.pdf"), bbox_inches="tight")
+print("wrote combined figure")
+
+
+# ------------------------------------------------------------------ single panel
+fig3, a3 = plt.subplots(figsize=(9.0, 4.2))
+a3.plot(t, (e_off - e_off.mean()) / n * 1e3, lw=0.7, color=BLUE,
+        label="MACE-OFF23")
+a3.plot(t, (e_pol - e_pol.mean()) / n * 1e3, lw=0.7, color=ORANGE,
+        label="MACE-POLAR")
+a3.plot(t, (dU - dU.mean()) / n * 1e3, lw=1.1, color="#009E73",
+        label="$\\Delta U$ (POLAR $-$ OFF23)")
+a3.set_xlabel("time (ps)")
+a3.set_ylabel("(E - <E>)/N (meV atom$^{-1}$)")
+a3.set_title("Potential-energy fluctuations of the 501-frame trajectory")
+a3.legend(frameon=False, ncol=3, loc="upper right", fontsize=8)
+a3.grid(alpha=0.2)
+a3.spines["top"].set_visible(False)
+a3.spines["right"].set_visible(False)
+a3.text(0.01, 0.03,
+        f"std: E_OFF {e_off.std()/n*1e3:.2f}, E_POLAR {e_pol.std()/n*1e3:.2f}, "
+        f"$\\Delta U$ {dU.std()/n*1e3:.2f} meV/atom",
+        transform=a3.transAxes, fontsize=7.5, va="bottom")
+fig3.tight_layout()
+fig3.savefig(OUT.with_name(OUT.name + "_single.png"), bbox_inches="tight")
+fig3.savefig(OUT.with_name(OUT.name + "_single.pdf"), bbox_inches="tight")
+print("wrote single-panel figure")
