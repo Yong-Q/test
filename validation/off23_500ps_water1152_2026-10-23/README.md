@@ -134,6 +134,17 @@ Symmetrix JSON used for the MD is 36 MB and is also at the path above.
 The per-frame weights and total energies are in `reweight_frames.json` and
 `frames_501_total_energies.csv`.
 
+## 5. Potential-energy fluctuations
+
+`potential_fluctuations_501.png` / `.pdf` (script
+`validation/plot_501_potential_fluctuations.py`):
+
+- left: (E - <E>)/N for MACE-OFF23 and MACE-POLAR over the 501 frames; the
+  two curves nearly overlap because the common thermal fluctuation dominates;
+- right: ΔU = E_POLAR - E_OFF, mean **480.864 eV**, std **0.356 eV**
+  (0.309 meV/atom).  The first ~10 ps show the initial equilibration
+  transient; production statistics use all 501 frames unless stated.
+
 ## 5. Logs and other files
 
 - `log.production_1fs` — MD thermo (step, temp, pe) every 1,000 steps.
