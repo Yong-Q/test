@@ -33,6 +33,10 @@ CV² = mean((q − q_mean)²) / q_mean² = 212.311856
 
 **图中展示已有501帧的权重集中度及源轨迹沿z方向的密度不均匀性。** 这是经验诊断；密度图采用O位点统计，不能直接充当质心密度或已认证的体相c₂输入。[高清PDF图](docs/results/20261027_off_polar_audit/ESS_and_density.pdf) · [图和审计数据](docs/results/20261027_off_polar_audit/README.md)
 
+### 新增：质心 A(x) 与 OFF23 的试算（2026-10-28）
+
+[查看质心密度、对关联和协方差诊断](docs/results/com_estimator_trial_20261028/README.md)。改变 A(x) 后，已有能量权重的 ESS 仍为 2.349。501帧可按编号重建水分子质心，氢原子最近氧归属无不一致；质心对统计在 6–8 Å 的均匀参考值分别为 OFF23 1.564、加权结果 1.492，反映现有分层体系不能直接按均匀体相 OZ 反演。绝对 c₁、目标 c₂ 和 POLAR 结果精度尚未得到验证。
+
 ### 这些数值能说明什么？
 
 - **已确认：** 给定能量表的指数权重高度集中；CV²与ESS的代数关系、上述数值均已复算。[原始能量表](validation/off23_500ps_water1152_2026-10-23/frames_501_total_energies.csv) · [完整方差结果JSON](docs/results/reweight_variance_20261027.json) · [复算程序](scripts/report/reweight_variance_20261027.py)
