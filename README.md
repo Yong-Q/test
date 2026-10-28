@@ -68,6 +68,15 @@ CV² = mean((q − q_mean)²) / q_mean² = 212.311856
 
 推导、原文页码、数值与限制见[公式核对](docs/reports/FORMULA_CROSSCHECK_PRIMARY_PDFS_2026-10-27.md)。
 
+## 势能波动（501 帧，1,152 原子）
+
+![501 帧势能波动](validation/off23_500ps_water1152_2026-10-23/potential_fluctuations_501_bath.png)
+
+上：MACE-OFF23、MACE-POLAR 的势能涨落与 ΔU；下：恒温器温度。
+热库波动 `std(E_OFF)/N = 1.56 meV/atom`，`ΔU` 的 `std = 0.31 meV/atom`，
+两者相关性 0.981；整盒 `βΔU` 的 `σ = 13.76`。完整说明与另外三张图见
+[500 ps 数据包](validation/off23_500ps_water1152_2026-10-23/README.md)。
+
 ## 方法
 
 对于相同温度、粒子数、体积和约束下的源体系与目标体系，在第i帧完整构型X[i]上计算总势能差，然后计算归一化权重：
