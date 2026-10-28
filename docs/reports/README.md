@@ -6,7 +6,9 @@
 
 建议依次阅读：
 
-1. **[修订理论与数据解释PDF](REWEIGHT_VARIANCE_REVISED_2026-10-27.pdf)**：完整公式、经验/总体方差、KL条件、采样源资格、文献修订和数值实现未完成项。
+1. **[12页扩展PDF：重加权估计器与实际观测量](REWEIGHT_ESTIMATOR_EXTENDED_2026-10-28.pdf)**：包括方差推导、每帧 A(x)、分子分母不同采样频率、分部积分的力密度表达式和验证条件。[扩展版LaTeX源码](REWEIGHT_ESTIMATOR_EXTENDED_2026-10-28.tex)。
+
+   此为理论及计算方案；力采样和多频率估计器尚未运行。原[8页修订版](REWEIGHT_VARIANCE_REVISED_2026-10-27.pdf)保留。
 2. **[七篇原文逐式核对](FORMULA_CROSSCHECK_PRIMARY_PDFS_2026-10-27.md)**：原PDF页码、公式区别和2019式(18)符号核验。
 3. **[学生评分报告](../ESS_STUDENT_TO_POLAR_2026-10-27.md)**：保留原数值，区分OFF旧帧、学生短轨迹及池化验证集。
 4. **[源势能量与空间审计](../results/20261027_off_polar_audit/README.md)**、[TODO](../TODO_OFF_POLAR_2026-10-27.md)：同帧能量一致性、分层、分子密度与c1/c2提取资格。
@@ -33,3 +35,7 @@
 ## 复现
 
 [兼容构建入口](../../validation/make_reweight_variance_pdf.py)已更新为修订版XeLaTeX构建器，默认写新文件名，已有文件时拒绝覆盖。新源码为[REWEIGHT_VARIANCE_REVISED_2026-10-27.tex](REWEIGHT_VARIANCE_REVISED_2026-10-27.tex)，从仓库根目录读取保存的数值TeX。需要XeLaTeX及源码中配置的字体；请在计算节点运行。构建日志保留在本地audits目录，不上传环境缓存或作业脚本。
+
+## 扩展版构建
+
+从仓库根目录用 XeLaTeX 对 `REWEIGHT_ESTIMATOR_EXTENDED_2026-10-28.tex` 编译两遍；源码读取 `docs/results/reweight_variance_20261027_numbers.tex`。将 `-output-directory` 指向新的构建目录，保留历史PDF。源码配置了当前服务器的字体路径，其他服务器可在源码副本中换成本地可用的拉丁与CJK字体。

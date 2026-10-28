@@ -40,7 +40,9 @@ CV² = mean((q − q_mean)²) / q_mean² = 212.311856
 - **学生势另行判断：** 1152原子的学生评分来自OFF旧帧，不能称为学生自采样的ESS；此前“学生生产尺寸不可用”结论已撤回。[修订说明](docs/ESS_STUDENT_TO_POLAR_2026-10-27.md)
 - **c₁/c₂尚未认证：** 源轨迹分层、分子密度定义、Widom/OZ实现及独立目标参照仍有待验收；也不能把Gaussian模型外推的 10⁴¹ 帧当实际算量。[TODO](docs/TODO_OFF_POLAR_2026-10-27.md)
 
-**[完整8页修订报告PDF：公式推导、数据资格与文献核对](docs/reports/REWEIGHT_VARIANCE_REVISED_2026-10-27.pdf)** · [七篇原文逐式对照](docs/reports/FORMULA_CROSSCHECK_PRIMARY_PDFS_2026-10-27.md)
+**[打开完整12页扩展报告PDF：方差推导、实际 A(x) 与估计器讨论](docs/reports/REWEIGHT_ESTIMATOR_EXTENDED_2026-10-28.pdf)** · [七篇原文逐式对照](docs/reports/FORMULA_CROSSCHECK_PRIMARY_PDFS_2026-10-27.md)
+
+扩展报告新增：每帧氧对计数和质心密度的显式定义；分子分母不同采样频率与协方差；分部积分的目标力密度表达式；以及需要目标力和新单点的验证条件。**这些估计器的比较尚未运行。**
 
 本项目研究从参考势轨迹重加权估计目标势的平衡统计，并探索密度、关联结构和c₁/c₂提取；当前以OFF23→POLAR为实例。旧PDF和原始结果保留用于追溯，当前解释以本页及修订报告为准。
 
@@ -166,7 +168,7 @@ print("weight ESS:", result.ess, "sigma_beta:", result.sigma_beta)
 | Widom 与分子理想参考 | 分母错误已复现；加权插入与刚性/柔性参考约定待完成 |
 | OZ 网格、有限尺寸与误差 | 网格和真实轨迹流程仍待修正/验收；解析测试通过不能替代这些检查 |
 | 目标 POLAR c₁/c₂ 标签 | 尚未完成独立目标参照、观测量不确定度和完整资格审核 |
-| 重加权因子方差推导（修订） | OFF旧帧的经验CV²=212.311856、Kish ESS=2.348674；不是总体散度测量。见[修订PDF](docs/reports/REWEIGHT_VARIANCE_REVISED_2026-10-27.pdf)；旧PDF保留为历史版本 |
+| 重加权因子方差推导（修订） | OFF旧帧的经验CV²=212.311856、Kish ESS=2.348674；不是总体散度测量。见[扩展PDF](docs/reports/REWEIGHT_ESTIMATOR_EXTENDED_2026-10-28.pdf)；旧PDF保留为历史版本 |
 | 学生势评分（修订） | 1152原子来自OFF旧帧，撤回学生生产尺寸不可用结论；96原子仅19帧，验证集未认证为平衡样本。见[报告](docs/ESS_STUDENT_TO_POLAR_2026-10-27.md) |
 
 后续顺序是：先修实现与输入约定，再重算已有数据，然后用匹配的 OFF/POLAR 采样验证。若直接重加权仍无法满足观测量精度要求，再实际采样中间混合势或更接近 POLAR 的参考势。在当前覆盖不足的情况下，需要实际的桥接或改进源势采样；MBAR一般允许未直接采样的目标态，但给同一批旧帧增加能量评分不能补出缺失构型。
