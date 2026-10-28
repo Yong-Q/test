@@ -17,3 +17,7 @@
 
 - Kish, *Survey Sampling* (1965) 是专著、无 DOI，不需要放。
 - PDF 只作阅读与核对；正文引用仍以 DOI 为准。
+
+## 估计器补充文献（2026-10-28）
+
+[四篇密度/RDF/跨势重加权论文 PDF、DOI 与哈希清单](estimators_20261028/README.md) · [对应 TODO](../docs/TODO_ESTIMATOR_LITERATURE_2026-10-28.md)。

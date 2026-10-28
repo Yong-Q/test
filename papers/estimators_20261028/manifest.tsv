@@ -1,0 +1,5 @@
+filename	doi	source	pages	bytes	sha256	supplement_status
+de_las_heras_2018_force_density.pdf	10.1103/PhysRevLett.120.218001	https://arxiv.org/pdf/1711.00006	7	1177865	6db25c1b3c4af42bcf8d0e4b1237e4f1823489b61f25b3f71c3e615d9f904999	no_separate_SI; author_pdf_may_include_appendix
+coles_2021_force_estimator_combination.pdf	10.1063/5.0053737	https://arxiv.org/pdf/2104.05038	4	376897	7a2326b995d2208cd5517f08db0ace585e602837ec94fff5b943229051bca8b6	no_separate_SI; author_pdf_may_include_appendix
+patrone_2017_spectral_rdf.pdf	10.1063/1.4977516	https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=920798	9	1360376	649a05f0f5250c9ff0a053a60cb3fe8973db2d5df0d94604e7efbb676cd9cb5e	no_separate_SI; author_pdf_may_include_appendix
+majumdar_2026_mlip_pmf_reweighting.pdf	10.48550/arXiv.2605.15630	https://arxiv.org/pdf/2605.15630	33	3729523	592b3e3b530702524109fc298e1da0ec7ed35773e0d06cd2dad5d6d9d15ef473	no_separate_SI; author_pdf_may_include_appendix
