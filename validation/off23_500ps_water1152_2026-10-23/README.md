@@ -140,7 +140,16 @@ The per-frame weights and total energies are in `reweight_frames.json` and
 `_single.png` (all three curves on one axis), `_combined.png` (curves +
 fluctuation-magnitude bars) and `_bath.png` (curves with the ±1σ heat-bath
 envelope plus the thermostat temperature); script
-`validation/plot_501_potential_fluctuations.py`:
+`validation/plot_501_potential_fluctuations.py`.
+
+![501-frame potential-energy fluctuations](potential_fluctuations_501.png)
+
+![All three curves on one axis](potential_fluctuations_501_single.png)
+
+![Heat-bath envelope and thermostat temperature](potential_fluctuations_501_bath.png)
+
+![Curves and fluctuation magnitudes](potential_fluctuations_501_combined.png)
+
 
 - left: (E - <E>)/N for MACE-OFF23 and MACE-POLAR over the 501 frames; the
   two curves nearly overlap because the common thermal fluctuation dominates;
