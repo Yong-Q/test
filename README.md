@@ -110,9 +110,9 @@ ln q₁(V,T) = β300 × U_OFF23 − βT × (U_POLAR + U_ext) + 常数
 
 ### 关键诊断图
 
-![501帧OFF23到POLAR的权重集中度及源轨迹空间密度诊断](docs/results/20261027_off_polar_audit/ESS_and_density.png)
+![关键诊断图：权重分布及含经典SPC参考的氧位点密度](docs/results/20261029_spc_readme_overlay/key_diagnostics_with_SPC.png)
 
-**图中展示已有501帧的权重集中度及源轨迹沿z方向的密度不均匀性。** 这是经验诊断；密度图采用O位点统计，不能直接充当质心密度或已认证的体相c₂输入。[高清PDF图](docs/results/20261027_off_polar_audit/ESS_and_density.pdf) · [图和审计数据](docs/results/20261027_off_polar_audit/README.md)
+**图 B 新增绿色实线：经典 SPC 三点参数 + PPPM 的时间平均。** 三条密度曲线都采用氧位点、同一周期盒、300 K、384 个水和 40 个 z 分箱；使用各自全部 501 个生产帧（0–500 ps），未平滑、未按层中心平移。SPC 与 OFF23 都出现分层；SPC 是不同势函数的参考，不能视为 POLAR 真值。重加权虚线仍为同一 OFF23 帧上的目标估计。这些 O 位点密度不能直接充当质心密度或已认证的均相 c₂ 输入。[高清 PDF](docs/results/20261029_spc_readme_overlay/key_diagnostics_with_SPC.pdf) · [数据与复现说明](docs/results/20261029_spc_readme_overlay/README.md)
 
 ### 新增：质心 A(x) 与 OFF23 的试算（2026-10-28）
 
