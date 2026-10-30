@@ -308,7 +308,7 @@ def timing_report(loop_time_s, n_steps, n_atoms, timestep_ps) -> dict:
 
 
 def run_md(data, species, elements, temperature, timestep, steps, dump_every,
-           workdir, equil_steps=20000, seed=12345,
+           workdir, equil_steps=200000, seed=12345,
            model=DEFAULT_MODEL, cubin=DEFAULT_CUBIN,
            lmp=DEFAULT_LMP, density=None, gpus=1, omp_threads=1,
            ld_library_path=DEFAULT_LD_LIBRARY_PATH) -> dict:
@@ -477,9 +477,9 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="number of MD steps for --run")
     ap.add_argument("--dump-every", type=int, default=1000,
                     help="dump (and thermo) interval in steps")
-    ap.add_argument("--equil-steps", type=int, default=20000,
+    ap.add_argument("--equil-steps", type=int, default=200000,
                     help="NVT equilibration steps before production/dump "
-                         "(0 disables)")
+                         "(default 200000 = 100 ps at 0.5 fs; 0 disables)")
     ap.add_argument("--seed", type=int, default=12345,
                     help="velocity initialization seed")
     ap.add_argument("--outdir", required=True,
