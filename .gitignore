@@ -13,3 +13,4 @@ out/
 validation/results/**/*.xyz
 validation/results/**/*.lammpstrj
 validation/results/**/*.log
+sampling/.scratch_maceles/
