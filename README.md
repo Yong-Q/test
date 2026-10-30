@@ -1,8 +1,19 @@
 # OFF → POLAR：重加权因子方差与直接关联函数
 
-## 六分子 MACELES 均相采样清单（2026-10-30）
+> **最新报告：[直接打开六分子 MACELES 采样计划 PDF](docs/reports/SIX_MOLECULE_MACELES_PRL_PLAN_20261030/report.pdf)**
+>
+> 3000原子/盒、1 ns/条；包含PRL温度核对、六分子密度范围、10/20点清单和时间预算。更新：2026-10-30。
 
-**[完整6页PDF：方法、密度大表与时间预算](docs/reports/SIX_MOLECULE_MACELES_PRL_PLAN_20261030/report.pdf)** · [说明与全部清单](docs/reports/SIX_MOLECULE_MACELES_PRL_PLAN_20261030/README.md) · [首批60条CSV](docs/reports/SIX_MOLECULE_MACELES_PRL_PLAN_20261030/states_10_per_molecule.csv) · [扩展120条CSV](docs/reports/SIX_MOLECULE_MACELES_PRL_PLAN_20261030/states_20_per_molecule.csv)
+| 报告与数据入口 | 内容 |
+|---|---|
+| **[完整PDF报告](docs/reports/SIX_MOLECULE_MACELES_PRL_PLAN_20261030/report.pdf)** | 6页：方法、温度、密度大表、盒长和耗时 |
+| [首批采样清单：60条](docs/reports/SIX_MOLECULE_MACELES_PRL_PLAN_20261030/states_10_per_molecule.csv) | 每分子10个密度点，逐条列出建盒与采样参数 |
+| [扩展采样清单：120条](docs/reports/SIX_MOLECULE_MACELES_PRL_PLAN_20261030/states_20_per_molecule.csv) | 每分子20点，保留首批全部点 |
+| [六分子完整密度大表](docs/reports/SIX_MOLECULE_MACELES_PRL_PLAN_20261030/density_grid.csv) | 20个约化密度点及六分子的实际候选密度 |
+| [时间预算表](docs/reports/SIX_MOLECULE_MACELES_PRL_PLAN_20261030/runtime_budget.csv) | GPU时、并行天数与预留余量；实测参照和预算情景分开 |
+| [方法说明与复现源码](docs/reports/SIX_MOLECULE_MACELES_PRL_PLAN_20261030/README.md) | 换算假设、模型版本、原文依据和生成程序 |
+
+## 六分子 MACELES 均相采样清单（2026-10-30）
 
 对象为 **H2O、NH3、CH4、C2H4、C2H6、CO2**，每盒恰好3000原子，每条生产1 ns，另预留0.1 ns平衡。建议每种先做10个密度点，预算预留20点；扩展保留首批点，每种只新增10条。此为计划，未提交MD。
 
