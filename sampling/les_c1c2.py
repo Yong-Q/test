@@ -473,7 +473,7 @@ def _build_parser() -> argparse.ArgumentParser:
                     default=300.0, help="NVT temperature in K")
     ap.add_argument("--timestep", type=float, default=0.0005,
                     help="MD timestep in ps (metal units)")
-    ap.add_argument("--steps", type=int, default=20000,
+    ap.add_argument("--steps", type=int, default=2000000,
                     help="number of MD steps for --run")
     ap.add_argument("--dump-every", type=int, default=1000,
                     help="dump (and thermo) interval in steps")

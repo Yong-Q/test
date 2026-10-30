@@ -69,7 +69,7 @@ def main(argv=None) -> int:
     ap.add_argument("--n-densities", type=int, default=10)
     ap.add_argument("--lo", type=float, default=0.2)
     ap.add_argument("--hi", type=float, default=2.2)
-    ap.add_argument("--steps", type=int, default=200000)
+    ap.add_argument("--steps", type=int, default=2000000)
     ap.add_argument("--dump-every", type=int, default=1000)
     args = ap.parse_args(argv)
     outroot = Path(args.outroot)

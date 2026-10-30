@@ -236,7 +236,7 @@ def main(argv=None) -> int:
                     help="analyze existing trajectories per row")
     ap.add_argument("--resume", action="store_true",
                     help="skip sim_ids that already have les_c1c2.json")
-    ap.add_argument("--steps", type=int, default=20000)
+    ap.add_argument("--steps", type=int, default=2000000)
     ap.add_argument("--equil-steps", type=int, default=200000,
                     help="NVT equilibration steps before production/dump (default 200000 = 100 ps at 0.5 fs)")
     ap.add_argument("--seed", type=int, default=12345,
