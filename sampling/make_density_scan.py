@@ -31,18 +31,42 @@ PRL = {
 }
 NMOL = {"H2O": 1000, "NH3": 750, "CH4": 600, "C2H4": 500,
         "C2H6": 375, "CO2": 1000}
+# Atoms per molecule; every source box stores molecules as contiguous
+# atom blocks whose first atom is the heavy centre (O/N/C).
+NATS = {"H2O": 3, "NH3": 4, "CH4": 5, "C2H4": 6, "C2H6": 8, "CO2": 3}
 COLUMNS = ["sim_id", "data", "traj", "species", "temperature", "timestep",
            "steps", "dump_every", "density", "c2_pair", "seed", "elements"]
 
 
-def rescaled_data(src: Path, dst: Path, rho_target: float, n_mol: int) -> float:
+def rescaled_data(src: Path, dst: Path, rho_target: float, n_mol: int,
+                  natoms_per_mol: int) -> float:
     atoms = read(src, format="lammps-data", atom_style="atomic")
     atoms.wrap()
     vol0 = atoms.get_volume()
     rho0 = n_mol / vol0
     scale = (rho0 / rho_target) ** (1.0 / 3.0)
-    atoms.set_cell(atoms.cell * scale, scale_atoms=True)
+    # Rigid-molecule rescale: scale only the molecular anchor (first atom of
+    # each contiguous block) and keep every intramolecular offset fixed.
+    # `atoms.set_cell(..., scale_atoms=True)` would stretch bonds by `scale`
+    # (e.g. N-H 1.01 -> 1.58 A), which makes the ML potential explode.
+    pos = atoms.get_positions().reshape(n_mol, natoms_per_mol, 3)
+    sym = np.array(atoms.get_chemical_symbols()).reshape(n_mol, natoms_per_mol)
+    L0 = np.array(atoms.cell.lengths())
+    rel = pos - pos[:, 0:1, :]
+    rel -= L0 * np.round(rel / L0)          # minimum image to the anchor
+    anchor = pos[:, 0, :] * scale
+    new_pos = (anchor[:, None, :] + rel).reshape(-1, 3)
+    atoms.set_cell(atoms.cell * scale)
+    atoms.set_positions(new_pos)
     atoms.wrap()
+    # Bond lengths must survive the rescale exactly.
+    r_before = np.linalg.norm(rel, axis=2)
+    p_after = atoms.get_positions().reshape(n_mol, natoms_per_mol, 3)
+    L1 = np.array(atoms.cell.lengths())
+    d_after = p_after - p_after[:, 0:1, :]
+    d_after -= L1 * np.round(d_after / L1)
+    r_after = np.linalg.norm(d_after, axis=2)
+    assert np.allclose(r_before, r_after, atol=1e-2), "bonds changed"
     dst.parent.mkdir(parents=True, exist_ok=True)
     masses = {1: 12.011, 2: 1.008, 3: 14.007, 4: 15.999}
     L = atoms.cell.lengths()
@@ -83,7 +107,7 @@ def main(argv=None) -> int:
         for i, rho in enumerate(rhos):
             rho = float(rho)
             dst = data_root / species / f"r{i:02d}_{rho:.6f}.lammps"
-            rescaled_data(src, dst, rho, NMOL[species])
+            rescaled_data(src, dst, rho, NMOL[species], NATS[species])
             rows.append({
                 "sim_id": f"{species}-PRL-T{temperature:g}-r{i:02d}-{rho:.6f}",
                 "data": str(dst.resolve()),

@@ -206,9 +206,23 @@ def write_lammps_input(workdir, data, model, cubin, elements, temperature,
     """Write the LES NVT input file and return its path."""
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
-    equil_block = ""
+    t_start = min(300.0, float(temperature))
     if equil_steps and equil_steps > 0:
-        equil_block = f"run {equil_steps}\nreset_timestep 0\n"
+        # Ramp from a gentle start temperature to the target over the first
+        # 20 % of the equilibration, then hold.  A cold start plus a staged
+        # heat-up avoids dumping the full target kinetic energy into a
+        # structure that has just been rescaled.
+        heat_steps = max(1, int(0.2 * equil_steps))
+        equil_block = (
+            f"fix 1 all nvt temp {t_start:g} {temperature:g} 0.1\n"
+            f"run {heat_steps}\n"
+            f"unfix 1\n"
+            f"fix 1 all nvt temp {temperature:g} {temperature:g} 0.1\n"
+            f"run {equil_steps - heat_steps}\n"
+            f"reset_timestep 0\n"
+        )
+    else:
+        equil_block = f"fix 1 all nvt temp {temperature:g} {temperature:g} 0.1\n"
     text = f"""units metal
 atom_style atomic/kk
 atom_modify map yes
@@ -219,10 +233,9 @@ read_data {Path(data).resolve()}
 pair_style {PAIR_STYLE.format(cubin=Path(cubin).resolve())}
 pair_coeff * * {Path(model).resolve()} {' '.join(elements)}
 neighbor 2.0 bin
-neigh_modify every 100 delay 0 check no
+neigh_modify every 10 delay 0 check yes
 timestep {timestep:g}
-velocity all create {temperature:g} {seed} mom yes rot no dist gaussian
-fix 1 all nvt temp {temperature:g} {temperature:g} 0.1
+velocity all create {t_start:g} {seed} mom yes rot no dist gaussian
 thermo {dump_every}
 thermo_style custom step temp pe
 run_style verlet/kk

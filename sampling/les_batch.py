@@ -145,11 +145,20 @@ def run_row(row: dict, args, outroot: Path) -> dict:
         f"{temperature:g}K-s{seed}")
     root = outroot / sim_id
     done = (root / "les_c1c2.json").exists()
+    md_done = (root / "meta.json").exists() and not done
     if root.exists():
         if args.resume and done:
             print(f"[batch] skip {sim_id} (already complete)")
             return {"sim_id": sim_id, "status": "skipped"}
-        if not args.resume:
+        if args.resume and md_done and getattr(args, "no_analyze", False):
+            print(f"[batch] skip {sim_id} (MD complete, no-analyze mode)")
+            return {"sim_id": sim_id, "status": "skipped"}
+        if args.resume:
+            import time as _time
+            keep = root.with_name(root.name + f".partial.{int(_time.time())}")
+            root.rename(keep)
+            print(f"[batch] partial {sim_id} kept at {keep}; restarting")
+        else:
             raise SystemExit(
                 f"refusing to overwrite existing {root}; use --resume to skip "
                 f"completed rows or choose another --outroot")
@@ -188,6 +197,25 @@ def run_row(row: dict, args, outroot: Path) -> dict:
             "traj": traj, "traj_sha256": md["dump_sha256"],
             "timing": md["timing"],
         })
+        if getattr(args, "no_analyze", False):
+            meta["status"] = "md_complete"
+            (root / "meta.json").write_text(
+                json.dumps(meta, indent=2, default=str))
+            record = {
+                "sim_id": sim_id, "species": species,
+                "temperature": temperature, "density": density,
+                "steps": steps, "dump_every": dump_every,
+                "timestep": timestep, "traj": meta.get("traj", ""),
+                "outdir": str(root), "n_frames": "",
+                "us_per_atom_step": meta.get("timing", {}).get(
+                    "us_per_atom_step", ""),
+                "hours_per_ns": meta.get("timing", {}).get(
+                    "hours_per_ns", ""),
+                "status": "md_complete",
+            }
+            append_summary(outroot, record)
+            print(f"[batch] {sim_id}: MD done, traj={meta.get('traj')}")
+            return record
         rec, density = analyze_trajectory(
             traj, root, species, elements, temperature, density=density,
             pair=pair, stride=args.stride, c2_bins=args.c2_bins,
@@ -235,7 +263,10 @@ def main(argv=None) -> int:
     ap.add_argument("--analyze-only", action="store_true",
                     help="analyze existing trajectories per row")
     ap.add_argument("--resume", action="store_true",
-                    help="skip sim_ids that already have les_c1c2.json")
+                    help="skip completed sim_ids; keep partial runs aside")
+    ap.add_argument("--no-analyze", action="store_true",
+                    help="run MD only and keep the trajectory; extract "
+                         "c1/c2 later with --analyze-only")
     ap.add_argument("--steps", type=int, default=2000000)
     ap.add_argument("--equil-steps", type=int, default=200000,
                     help="NVT equilibration steps before production/dump (default 200000 = 100 ps at 0.5 fs)")
