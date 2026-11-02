@@ -80,29 +80,25 @@ def _mic(vec, cell):
     return vec - cell * np.round(vec / cell)
 
 
-def _p2_axes(pos, cell):
-    """cos^2(z) of each molecule's principal (largest-variance) axis."""
-    rel = pos - pos[:, 0:1, :]            # relative to the central (heavy) atom
-    rel = _mic(rel, cell)
-    cov = np.einsum("mki,mkj->mij", rel, rel)
-    _, vec = np.linalg.eigh(cov)          # ascending eigenvalues
-    axis = vec[:, :, 2]
-    return axis[:, 2] ** 2
+def _orientation_vec(rel, species):
+    """Unit molecular orientation vector (per species), built from atom
+    positions relative to the central (heavy) atom, already min-image'd.
 
+    - H2O/NH3 : dipole / symmetry axis = sum of X-H bond vectors
+                (C2/C3 axis pointing from the central atom toward the H's).
+    - CO2     : molecular axis = O--O line.
+    - CH4/C2H4/C2H6 : first bond (C-H / C=C / C-C) as the molecular axis.
 
-def _orient_axes(pos, cell):
-    """Principal axes of each molecule and the spherical angles (theta, phi)
-    of the largest-variance axis (the molecular orientation)."""
-    rel = pos - pos[:, 0:1, :]            # relative to the central (heavy) atom
-    rel = _mic(rel, cell)
-    cov = np.einsum("mki,mkj->mij", rel, rel)
-    _, vec = np.linalg.eigh(cov)          # ascending eigenvalues
-    axes = np.transpose(vec, (0, 2, 1))   # (n_mol, 3, 3), columns = axes
-    axis = axes[:, :, 2]                  # largest-variance (principal) axis
-    axis = axis / np.maximum(np.linalg.norm(axis, axis=1, keepdims=True), 1e-30)
-    theta = np.arccos(np.clip(axis[:, 2], -1.0, 1.0))  # polar angle
-    phi = np.arctan2(axis[:, 1], axis[:, 0])           # azimuthal angle
-    return axes, axis, theta, phi
+    Raw bond vectors keep a fixed direction, so there is no sign ambiguity
+    from the eigendecomposition.
+    """
+    if species in ("H2O", "NH3"):
+        v = rel[:, 1:, :].sum(axis=1)
+    elif species == "CO2":
+        v = rel[:, 1, :] - rel[:, 2, :]
+    else:
+        v = rel[:, 1, :]
+    return v / np.maximum(np.linalg.norm(v, axis=1, keepdims=True), 1e-30)
 
 
 def _tetrahedral_q(centrals, cell):
@@ -206,9 +202,11 @@ def analyze_state(traj, species, outdir, n_frames=200, rdf_frames=20,
             c = (v1 * v2).sum(1) / (np.linalg.norm(v1, axis=1) *
                                     np.linalg.norm(v2, axis=1))
             angles.append(np.degrees(np.arccos(np.clip(c, -1, 1))))
-        p2.append(_p2_axes(pos, cell))
-        _, ax, th, ph = _orient_axes(pos, cell)
-        orient_axis.append(ax); otheta.append(th); ophi.append(ph)
+        ov = _orientation_vec(rel, species)
+        p2.append(ov[:, 2] ** 2)
+        orient_axis.append(ov)
+        otheta.append(np.arccos(np.clip(ov[:, 2], -1.0, 1.0)))
+        ophi.append(np.arctan2(ov[:, 1], ov[:, 0]))
         qtet.append(_tetrahedral_q(pos[:, 0, :], cell))
         if species in HB_ACCEPTORS and idx % hb_stride == 0:
             hb_per_mol.append(_hbonds(atoms, sym, HB_ACCEPTORS[species])
