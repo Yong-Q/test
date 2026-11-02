@@ -1,3 +1,81 @@
+# MACELES / LES — 六分子密度扫描与 c1/c2 流水线
+
+一条链路：**建盒 → 分片 → LAMMPS(MACELES) MD → c1/c2 + 结构后处理 → 汇总图表**。
+详细安装/换机说明见 **[QUICKSTART.md](QUICKSTART.md)**。
+
+## 状态（2026-11-02）
+
+| 项 | 值 |
+|---|---|
+| 扫描 | 6 物种 × 10 密度（0.2–2.2 ρc，T = 1.55 Tc），每盒 3000 原子，100 ps 平衡 + 1 ns 生产 |
+| 运行 | 4 个分片在 q4 单卡并行：`t-20261102093724-5xdfw` / `-093733-cs6hz` / `-093805-vv7sk` / `-093812-klckg` |
+| 引擎 | 已冻结在 `ccdde6b`（上游 `6c5f73b` + LES commit），fork：`Yong-Q/symmetrix-xl_polar` 分支 `les-polar` |
+| 模型 | `assets/maceles_off/`（40 MB json + sm_80 cubin） |
+| 源码快照 | `assets/symmetrix-xl-6c5f73b-les-src.tar.gz`（离线可编） |
+
+## 快速开始
+
+```bash
+git clone git@github.com:Yong-Q/test.git && cd test
+
+# A. 只有 Python 流水线（后处理 / 已有轨迹）
+pip install packaging/symmpolar            # CLI: symmpolar check|smoke|scan
+scripts/setup_env.sh                       # 核对 numpy scipy ase matplotlib
+
+# B. 要跑 MD：需要引擎 + LAMMPS
+git clone --recurse-submodules -b les-polar \
+    git@github.com:Yong-Q/symmetrix-xl_polar.git ~/engines/symmetrix-xl
+SYMMETRIX_DIR=~/engines/symmetrix-xl SYMMPOLAR_CUDA_ARCH="80;90" \
+  packaging/symmpolar-engine/build_wheel.sh          # 引擎 wheel
+SYMMETRIX_DIR=~/engines/symmetrix-xl LAMMPS_DIR=~/lammps-stable_30Sep2026 \
+  scripts/build_engine.sh                            # lmp
+
+# C. 跑完整扫描 / 只做后处理
+MODEL=$PWD/assets/maceles_off/maceles_off_chno.json \
+CUBIN=$PWD/assets/maceles_off/maceles_off.cubin \
+LMP=~/engines/symmetrix-xl/symmetrix/build-lammps-les/lmp \
+  scripts/run_density_scan.sh                       # STAGE=all|data|split|run|post
+```
+
+## 仓库结构
+
+| 路径 | 作用 |
+|---|---|
+| `sampling/` | 建盒（`make_density_scan`）、分片（`split_scan`）、MD 批处理（`les_batch`/`les_c1c2`）、后处理（`scan_analysis`）、冒烟盒（`make_smoke_box`） |
+| `scripts/` | `setup_env.sh`、`build_engine.sh`、`smoke_test.sh`、`run_density_scan.sh` |
+| `packaging/symmpolar/` | pip 可装的 CLI（纯 Python） |
+| `packaging/symmpolar-engine/` | CUDA 引擎 wheel 的 pyproject + 构建脚本 |
+| `assets/` | 模型 json/cubin、引擎源码快照 |
+| `.github/workflows/wheels.yml` | CI：sm80;90 fatbin wheel，tag 时发 PyPI |
+| `docs/reports/` | 采样计划 PDF、周报与结果归档 |
+
+## 输出布局（`$OUT` 默认 `bench/maceles_density_scan`）
+
+```
+density_scan.csv                     60 条清单
+shard_i/attempt-04/manifest.csv
+shard_i/attempt-04/samples/<sim_id>/run/traj.dump.gz   轨迹（每条 gzip）
+analysis_scan/
+  scan_summary.csv                   每条一行：峰位/峰高/配位/角度/氢键/P2/q_tet
+  c2_<species>.npz                   r 网格 + c2 矩阵 + rho/T
+  figures/c2_<species>.png, gr_<species>.png, trends.png
+```
+
+## 已知约束
+
+- 工作区是 ~310 GB 的 per-scope 配额，且 worker 以 `nobody` 身份写时额度更小：轨迹逐条 gzip，默认 0.5 ps 一帧（`DUMP_EVERY=1000`）。
+- 引擎必须用 `les-polar`（含 `les_ewald.hpp`），`build_wheel.sh` 会自动校验，编到 `main` 会直接报错。
+- 上游 `symmetrix-xl` 已前进到 `93a747d`，**不要**用它直接编 LES；跟进上游时在 `les-polar` 上 rebase 并重跑力/能量验证。
+
+## 相关文档
+
+- [QUICKSTART.md](QUICKSTART.md) —— 换机器、安装、编译、故障表
+- [docs/reports/SIX_MOLECULE_MACELES_PRL_PLAN_20261030/report.pdf](docs/reports/SIX_MOLECULE_MACELES_PRL_PLAN_20261030/report.pdf) —— 采样计划
+- `symmetrix-polar/docs/results/DENSITY_SCAN_PROTOCOL_2026-11-01.md` —— 协议、刚性缩放修复、配额结论
+- `symmetrix-polar/docs/results/MACELES_FORCE_FIX_2026-10-30.md` —— LES 力修复与验证
+
+---
+
 # OFF → POLAR：重加权因子方差与直接关联函数
 
 > **新：[MACELES 密度扫描 QUICKSTART](QUICKSTART.md)** —— 建盒 → 分片 → MD → c1/c2/结构后处理 → 图表，一条命令跑通；含换机器安装/编译说明。
