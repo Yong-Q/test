@@ -91,6 +91,9 @@ def rescaled_data(src: Path, dst: Path, rho_target: float, n_mol: int,
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--outroot", default="maceles_density_scan")
+    ap.add_argument("--src-root", default=str(SIX_ROOT),
+                    help="source box root (six_3000), overrides the remote "
+                         "default for local generation")
     ap.add_argument("--n-densities", type=int, default=10)
     ap.add_argument("--lo", type=float, default=0.02)  # ρ* = ρσ³ (PRL)
     ap.add_argument("--hi", type=float, default=0.67)
@@ -98,11 +101,12 @@ def main(argv=None) -> int:
     ap.add_argument("--dump-every", type=int, default=1000)
     args = ap.parse_args(argv)
     outroot = Path(args.outroot)
+    src_root = Path(args.src_root)
     data_root = outroot / "data"
     rows = []
     for species, (tc, rhoc, pair) in PRL.items():
         temperature = round(2.0 / 1.312 * tc, 1)  # PRL T*=2, full-LJ T*c=1.312
-        src = SIX_ROOT / species / "data.lammps"
+        src = src_root / species / "data.lammps"
         rho_stars = np.linspace(args.lo, args.hi, args.n_densities)
         rhos = rho_stars * rhoc / 0.316  # ρ = ρ* ρc / ρ*c, full-LJ ρ*c=0.316
         for i, rho in enumerate(rhos):
