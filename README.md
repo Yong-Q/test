@@ -1,5 +1,7 @@
 # OFF → POLAR：重加权因子方差与直接关联函数
 
+> **新：[MACELES 密度扫描 QUICKSTART](QUICKSTART.md)** —— 建盒 → 分片 → MD → c1/c2/结构后处理 → 图表，一条命令跑通；含换机器安装/编译说明。
+
 > **最新报告：[直接打开六分子 MACELES 采样计划 PDF](docs/reports/SIX_MOLECULE_MACELES_PRL_PLAN_20261030/report.pdf)**
 >
 > 3000原子/盒、1 ns/条；包含PRL温度核对、六分子密度范围、10/20点清单和时间预算。更新：2026-10-30。
