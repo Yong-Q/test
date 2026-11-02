@@ -90,6 +90,21 @@ def _p2_axes(pos, cell):
     return axis[:, 2] ** 2
 
 
+def _orient_axes(pos, cell):
+    """Principal axes of each molecule and the spherical angles (theta, phi)
+    of the largest-variance axis (the molecular orientation)."""
+    rel = pos - pos.mean(axis=1, keepdims=True)
+    rel = _mic(rel, cell)
+    cov = np.einsum("mki,mkj->mij", rel, rel)
+    _, vec = np.linalg.eigh(cov)          # ascending eigenvalues
+    axes = np.transpose(vec, (0, 2, 1))   # (n_mol, 3, 3), columns = axes
+    axis = axes[:, :, 2]                  # largest-variance (principal) axis
+    axis = axis / np.maximum(np.linalg.norm(axis, axis=1, keepdims=True), 1e-30)
+    theta = np.arccos(np.clip(axis[:, 2], -1.0, 1.0))  # polar angle
+    phi = np.arctan2(axis[:, 1], axis[:, 0])           # azimuthal angle
+    return axes, axis, theta, phi
+
+
 def _tetrahedral_q(centrals, cell):
     """q for the 4 nearest central atoms (periodic)."""
     diff = centrals[None, :, :] - centrals[:, None, :]
@@ -168,6 +183,7 @@ def analyze_state(traj, species, outdir, n_frames=200, rdf_frames=20,
     hb_stride = max(1, total // max(1, hb_frames))
 
     bonds, angles, p2, qtet, hb_per_mol = [], [], [], [], []
+    orient_axis, otheta, ophi = [], [], []
     r_pair = g_pair = r_xh = g_xh = None
     n_seen = 0
     n_rdf_seen = 0
@@ -191,6 +207,8 @@ def analyze_state(traj, species, outdir, n_frames=200, rdf_frames=20,
                                     np.linalg.norm(v2, axis=1))
             angles.append(np.degrees(np.arccos(np.clip(c, -1, 1))))
         p2.append(_p2_axes(pos, cell))
+        _, ax, th, ph = _orient_axes(pos, cell)
+        orient_axis.append(ax); otheta.append(th); ophi.append(ph)
         qtet.append(_tetrahedral_q(pos[:, 0, :], cell))
         if species in HB_ACCEPTORS and idx % hb_stride == 0:
             hb_per_mol.append(_hbonds(atoms, sym, HB_ACCEPTORS[species])
@@ -215,6 +233,9 @@ def analyze_state(traj, species, outdir, n_frames=200, rdf_frames=20,
         raise RuntimeError(f"no frames read from {traj}")
     bonds = np.concatenate(bonds)
     p2 = np.concatenate(p2)
+    orient_axis = np.concatenate(orient_axis)
+    otheta = np.concatenate(otheta)
+    ophi = np.concatenate(ophi)
     qtet = np.concatenate(qtet)
     g_pair = g_pair / max(1, n_rdf_seen)
     g_xh = g_xh / max(1, n_rdf_seen)
@@ -253,7 +274,8 @@ def analyze_state(traj, species, outdir, n_frames=200, rdf_frames=20,
         "pair_label": f"{central_sym}-{central_sym}",
     }
     np.savez(out / "profiles.npz", r_pair=r_pair, g_pair=g_pair,
-             r_xh=r_xh, g_xh=g_xh, bonds=bonds, p2=p2, q_tet=qtet)
+             r_xh=r_xh, g_xh=g_xh, bonds=bonds, p2=p2, q_tet=qtet,
+             orient_axis=orient_axis, orient_theta=otheta, orient_phi=ophi)
     (out / "state.json").write_text(json.dumps(rec, indent=2))
     return rec
 

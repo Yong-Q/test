@@ -239,7 +239,7 @@ velocity all create {t_start:g} {seed} mom yes rot no dist gaussian
 thermo {dump_every}
 thermo_style custom step temp pe
 run_style verlet/kk
-{equil_block}dump 1 all custom {dump_every} traj.dump id type x y z
+{equil_block}dump 1 all custom {dump_every} traj.dump id type x y z fx fy fz
 dump_modify 1 sort id
 run {steps}
 """

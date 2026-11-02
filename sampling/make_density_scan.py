@@ -29,8 +29,8 @@ PRL = {
     "C2H6": (305.3, 0.00407, "C C"),
     "CO2": (304.1, 0.00640, "C O"),
 }
-NMOL = {"H2O": 1000, "NH3": 750, "CH4": 600, "C2H4": 500,
-        "C2H6": 375, "CO2": 1000}
+NMOL = {"H2O": 667, "NH3": 500, "CH4": 500, "C2H4": 500,
+        "C2H6": 500, "CO2": 667}
 # Atoms per molecule; every source box stores molecules as contiguous
 # atom blocks whose first atom is the heavy centre (O/N/C).
 NATS = {"H2O": 3, "NH3": 4, "CH4": 5, "C2H4": 6, "C2H6": 8, "CO2": 3}
@@ -91,8 +91,8 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--outroot", default="maceles_density_scan")
     ap.add_argument("--n-densities", type=int, default=10)
-    ap.add_argument("--lo", type=float, default=0.2)
-    ap.add_argument("--hi", type=float, default=2.2)
+    ap.add_argument("--lo", type=float, default=0.02)  # ρ* = ρσ³ (PRL)
+    ap.add_argument("--hi", type=float, default=0.67)
     ap.add_argument("--steps", type=int, default=2000000)
     ap.add_argument("--dump-every", type=int, default=1000)
     args = ap.parse_args(argv)
@@ -100,10 +100,10 @@ def main(argv=None) -> int:
     data_root = outroot / "data"
     rows = []
     for species, (tc, rhoc, pair) in PRL.items():
-        temperature = round(1.55 * tc, 1)
+        temperature = round(2.0 / 1.312 * tc, 1)  # PRL T*=2, full-LJ T*c=1.312
         src = SIX_ROOT / species / "data.lammps"
-        rhos = np.geomspace(args.lo * rhoc, args.hi * rhoc,
-                            args.n_densities)
+        rho_stars = np.linspace(args.lo, args.hi, args.n_densities)
+        rhos = rho_stars * rhoc / 0.316  # ρ = ρ* ρc / ρ*c, full-LJ ρ*c=0.316
         for i, rho in enumerate(rhos):
             rho = float(rho)
             dst = data_root / species / f"r{i:02d}_{rho:.6f}.lammps"
