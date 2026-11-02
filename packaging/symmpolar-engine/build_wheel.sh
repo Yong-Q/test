@@ -9,14 +9,20 @@ set -euo pipefail
 
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO=$(cd -- "$HERE/../.." && pwd -P)
-SYMMETRIX_DIR=${1:-${SYMMETRIX_DIR:-$REPO/../symmetrix-xl}}
+SYMMETRIX_REPO=${SYMMETRIX_REPO:-git@github.com:bonan-group/symmetrix-xl.git}
+SYMMETRIX_DIR=${1:-${SYMMETRIX_DIR:-}}
+if [[ -z "$SYMMETRIX_DIR" ]]; then
+    SYMMETRIX_DIR=$REPO/build/symmetrix-xl
+fi
 CUDA_ARCH=${SYMMPOLAR_CUDA_ARCH:-80}
 PY=${PY:-python3}
 OUT=${OUT:-$REPO/dist}
 
+# self-contained: clone the engine sources on first use
 if [[ ! -f "$SYMMETRIX_DIR/symmetrix/pyproject.toml" ]]; then
-    echo "not a symmetrix-xl checkout: $SYMMETRIX_DIR" >&2
-    exit 1
+    echo "cloning $SYMMETRIX_REPO -> $SYMMETRIX_DIR"
+    mkdir -p "$(dirname "$SYMMETRIX_DIR")"
+    git clone --depth 1 "$SYMMETRIX_REPO" "$SYMMETRIX_DIR"
 fi
 
 PATCH=$REPO/../symmetrix-polar/engine/maceles-les/0001-maceles-complete-LES-integration-with-charge-respons.patch
