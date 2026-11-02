@@ -37,7 +37,12 @@ jobs:
           sha256sum -c MANIFEST.sha256
           echo "--- BUILD_INFO ---"; cat BUILD_INFO.txt
           test -x bin/lmp && test -x bin/lmp-run && test -f env.sh
-          ./bin/lmp -h | head -3
+          file bin/lmp | grep -q ELF
+          # The runner has no GPU/toolkit, so cublas/cuda may be unresolved;
+          # anything else missing means the bundle is broken.
+          missing=$(ldd bin/lmp | awk '/not found/{print $1}' \
+                    | grep -Ev '^lib(cublas|cublasLt|cuda)\.so' || true)
+          [ -z "$missing" ] || { echo "unexpected missing libs: $missing"; exit 1; }
 
       - uses: actions/upload-artifact@v4
         with:
