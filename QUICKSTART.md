@@ -76,6 +76,19 @@ scripts/setup_env.sh --install                        # 检查/安装 numpy scip
 
 没有 conda 时：`python3 -m venv .venv && . .venv/bin/activate && scripts/setup_env.sh --install`
 
+
+## 1.5 pip 安装（可选，替代源码编译引擎）
+
+```bash
+pip install packaging/symmpolar                     # CLI: symmpolar check/smoke/scan
+pip install symmpolar_engine-0.1.1+cu12.9.sm80-*.whl   # 引擎（GitHub Release / 自建）
+symmpolar build-lammps --lammps-dir ~/lammps        # LAMMPS 仍需本机编一次
+```
+
+引擎 wheel 由 `packaging/symmpolar-engine/build_wheel.sh` 或
+`.github/workflows/wheels.yml`（CUDA 12.9 × sm80/sm90 矩阵）产出；LAMMPS 二进制
+不进 PyPI（GPL + 体积），用编译脚本或 Release 里的 `lmp`。
+
 ## 2. 编译引擎（10–20 分钟）
 
 ```bash
