@@ -42,25 +42,19 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install scikit-build-core pybind11 wheel cmake ninja
 
-      - name: Get symmetrix-xl (with MACELES-LES)
+      - name: Build wheel (pinned engine base)
         env:
           DEPLOY_KEY: ${{ secrets.SYMMETRIX_DEPLOY_KEY }}
+          SYMMPOLAR_CUDA_ARCH: ${{ env.CUDA_ARCHES }}
         run: |
           if [ -n "$DEPLOY_KEY" ]; then
             install -m 600 /dev/null /tmp/deploy_key
             printf '%s\n' "$DEPLOY_KEY" > /tmp/deploy_key
             export GIT_SSH_COMMAND="ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no"
-            git clone --depth 1 --recurse-submodules --shallow-submodules git@github.com:bonan-group/symmetrix-xl.git ../symmetrix-xl
-          else
-            git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/bonan-group/symmetrix-xl.git ../symmetrix-xl
+            export SYMMETRIX_REPO=git@github.com:bonan-group/symmetrix-xl.git
           fi
-
-      - name: Build wheel
-        env:
-          SYMMPOLAR_CUDA_ARCH: ${{ env.CUDA_ARCHES }}
-        run: |
           chmod +x packaging/symmpolar-engine/build_wheel.sh
-          packaging/symmpolar-engine/build_wheel.sh ../symmetrix-xl
+          packaging/symmpolar-engine/build_wheel.sh
           ls -lh dist
 
       - uses: actions/upload-artifact@v4

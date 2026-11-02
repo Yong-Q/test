@@ -10,6 +10,10 @@ set -euo pipefail
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO=$(cd -- "$HERE/../.." && pwd -P)
 SYMMETRIX_REPO=${SYMMETRIX_REPO:-git@github.com:bonan-group/symmetrix-xl.git}
+# Upstream moves; the LES patch was generated against this exact base, so a
+# fresh clone is pinned to it.  Point SYMMETRIX_REF at a fork's tip if the
+# patch is already committed there.
+SYMMETRIX_REF=${SYMMETRIX_REF:-6c5f73b}
 SYMMETRIX_DIR=${1:-${SYMMETRIX_DIR:-}}
 if [[ -z "$SYMMETRIX_DIR" ]]; then
     SYMMETRIX_DIR=$REPO/build/symmetrix-xl
@@ -18,12 +22,14 @@ CUDA_ARCH=${SYMMPOLAR_CUDA_ARCH:-80}
 PY=${PY:-python3}
 OUT=${OUT:-$REPO/dist}
 
-# self-contained: clone the engine sources on first use
+# self-contained: fetch exactly the base the patch applies to
 if [[ ! -f "$SYMMETRIX_DIR/symmetrix/pyproject.toml" ]]; then
-    echo "cloning $SYMMETRIX_REPO -> $SYMMETRIX_DIR"
+    echo "fetching $SYMMETRIX_REPO @ $SYMMETRIX_REF -> $SYMMETRIX_DIR"
     mkdir -p "$(dirname "$SYMMETRIX_DIR")"
-    git clone --depth 1 --recurse-submodules --shallow-submodules \
-        "$SYMMETRIX_REPO" "$SYMMETRIX_DIR"
+    git clone --filter=blob:none --no-checkout "$SYMMETRIX_REPO" "$SYMMETRIX_DIR"
+    git -C "$SYMMETRIX_DIR" fetch --depth 1 origin "$SYMMETRIX_REF"
+    git -C "$SYMMETRIX_DIR" checkout --detach FETCH_HEAD
+    git -C "$SYMMETRIX_DIR" submodule update --init --depth 1 --recursive
 fi
 
 PATCH=$REPO/../symmetrix-polar/engine/maceles-les/0001-maceles-complete-LES-integration-with-charge-respons.patch
