@@ -47,6 +47,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -274,6 +275,30 @@ def run_row(row: dict, args, outroot: Path) -> dict:
     return record
 
 
+WORKSPACE_OWNER_UID = 166536
+
+
+def drop_to_workspace_owner() -> None:
+    """Run as the workspace owner so outputs land in the right quota.
+
+    On root-squashed vePFS nodes a root process writes files owned by
+    `nobody` (uid 65534); those bytes hit a small per-identity quota and the
+    dump dies with EDQUOT after a few GB.  Running as the workspace owner
+    (uid 166536) charges the writes to the real workspace quota instead.
+    """
+    if os.getuid() != 0:
+        print(f"[batch] running as uid {os.getuid()}, not dropping privileges")
+        return
+    try:
+        os.setgroups([])
+        os.setgid(WORKSPACE_OWNER_UID)
+        os.setuid(WORKSPACE_OWNER_UID)
+        print(f"[batch] dropped privileges to uid={os.getuid()} "
+              f"gid={os.getgid()}")
+    except OSError as exc:
+        print(f"[batch] WARNING: could not drop privileges: {exc}")
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description="Batch MACELES/LES c1/c2 sampling with trajectory retention.",
@@ -294,6 +319,8 @@ def main(argv=None) -> int:
     ap.add_argument("--no-compress-traj", action="store_true",
                     help="keep traj.dump uncompressed after MD (default: gzip "
                          "it to stay inside the workspace quota)")
+    ap.add_argument("--no-drop-priv", action="store_true",
+                    help="do not switch to uid 166536 when started as root")
     ap.add_argument("--steps", type=int, default=2000000)
     ap.add_argument("--equil-steps", type=int, default=200000,
                     help="NVT equilibration steps before production/dump (default 200000 = 100 ps at 0.5 fs)")
@@ -316,6 +343,9 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     if args.run and args.analyze_only:
         ap.error("choose one of --run / --analyze-only")
+
+    if (args.run or args.analyze_only) and not getattr(args, "no_drop_priv", False):
+        drop_to_workspace_owner()
 
     manifest = Path(args.manifest)
     if args.template:
