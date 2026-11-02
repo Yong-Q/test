@@ -334,8 +334,9 @@ def main(argv=None) -> int:
     ap.add_argument("--no-compress-traj", action="store_true",
                     help="keep traj.dump uncompressed after MD (default: gzip "
                          "it to stay inside the workspace quota)")
-    ap.add_argument("--no-drop-priv", action="store_true",
-                    help="do not switch to uid 166536 when started as root")
+    ap.add_argument("--drop-priv", action="store_true",
+                    help="switch to uid 166536 when started as root (off by "
+                         "default: the workspace dirs belong to other uids)")
     ap.add_argument("--steps", type=int, default=2000000)
     ap.add_argument("--equil-steps", type=int, default=200000,
                     help="NVT equilibration steps before production/dump (default 200000 = 100 ps at 0.5 fs)")
@@ -359,7 +360,7 @@ def main(argv=None) -> int:
     if args.run and args.analyze_only:
         ap.error("choose one of --run / --analyze-only")
 
-    if (args.run or args.analyze_only) and not getattr(args, "no_drop_priv", False):
+    if (args.run or args.analyze_only) and getattr(args, "drop_priv", False):
         drop_to_workspace_owner(args.outroot)
 
     manifest = Path(args.manifest)
