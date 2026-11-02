@@ -198,6 +198,30 @@ def run_row(row: dict, args, outroot: Path) -> dict:
             "timing": md["timing"],
         })
         if getattr(args, "no_analyze", False):
+            # The workspace sits under a per-scope quota; 60 raw 1 ns dumps at
+            # 25 fs need ~250 GB.  Compress each finished trajectory (~4-5x on
+            # text dumps) right after MD so the steady-state footprint is small.
+            if not getattr(args, "no_compress_traj", False):
+                import gzip
+                import shutil as _shutil
+                traj_path = Path(traj)
+                if traj_path.exists() and traj_path.suffix != ".gz":
+                    gz = traj_path.with_name(traj_path.name + ".gz")
+                    with open(traj_path, "rb") as fi, \
+                            gzip.open(gz, "wb", compresslevel=5) as fo:
+                        _shutil.copyfileobj(fi, fo, 8 << 20)
+                    raw_bytes = traj_path.stat().st_size
+                    gz_sha = sha256(gz)
+                    traj_path.unlink()
+                    traj = str(gz)
+                    md["dump"] = traj
+                    md["dump_sha256"] = gz_sha
+                    meta.update({"traj": traj, "traj_sha256": gz_sha,
+                                 "traj_raw_bytes": raw_bytes,
+                                 "traj_gz_bytes": gz.stat().st_size})
+                    print(f"[batch] {sim_id}: compressed traj "
+                          f"{raw_bytes/1e9:.2f} -> "
+                          f"{gz.stat().st_size/1e9:.2f} GB")
             meta["status"] = "md_complete"
             (root / "meta.json").write_text(
                 json.dumps(meta, indent=2, default=str))
@@ -267,6 +291,9 @@ def main(argv=None) -> int:
     ap.add_argument("--no-analyze", action="store_true",
                     help="run MD only and keep the trajectory; extract "
                          "c1/c2 later with --analyze-only")
+    ap.add_argument("--no-compress-traj", action="store_true",
+                    help="keep traj.dump uncompressed after MD (default: gzip "
+                         "it to stay inside the workspace quota)")
     ap.add_argument("--steps", type=int, default=2000000)
     ap.add_argument("--equil-steps", type=int, default=200000,
                     help="NVT equilibration steps before production/dump (default 200000 = 100 ps at 0.5 fs)")
