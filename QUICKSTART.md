@@ -17,6 +17,34 @@ sampling/scan_analysis.py       c1/c2(f1,f2) + g(r)/取向/氢键/四面体序 �
         ▼  analysis_scan/{scan_summary.csv, c2_<species>.npz, figures/*.png}
 ```
 
+## 0.0 用打包好的引擎（不编译，最快）
+
+`dist/maceles-lmp-env-*.tar.gz` 是 **解包即用** 的引擎包：LAMMPS + Kokkos/CUDA +
+`pair_style symmetrix/mace/.../kk`、运行库（cudart/openblas/gfortran/gomp/stdc++）、
+`assets/maceles_off/` 的 json+cubin、`sampling/` 全套（建盒/分片/MD/c1c2/后处理）、
+示例输入和 `jobs/` 模板（veMLP 的 `q4_veMLP.yaml`、`entrypoint_scan.sh`、Slurm）。
+
+```bash
+tar xzf maceles-lmp-env-*.tar.gz && cd maceles-lmp-env-*
+. ./env.sh
+examples/smoke/run.sh                 # 64 水分子 500 步，A100 上约 30 s
+examples/pipeline/run.sh              # 建盒→MD→c1/c2 后处理，全链路
+```
+
+节点上只需要：x86-64 + glibc ≥ 2.34、NVIDIA 驱动 ≥ 525、CUDA 12 的 `libcublas.so.12`
+（`env.sh` 会自动找 `/opt/matos-tools/cuda/*/lib64`、`/usr/local/cuda*/lib64`，
+也可用 `CUDA_HOME` / `MACELES_CUDA_LIB` 指定）。cublas 有 0.85 GB，所以没有打进包里。
+
+交任务：`jobs/q4_veMLP.yaml`（把 `UserCodePath` 指向解包目录），入口是
+`jobs/entrypoint_scan.sh`，它读 `MANIFEST`，用 `les_batch.py --run --resume` 跑一个 shard。
+
+重新打包（换了 lmp 二进制之后）：
+
+```bash
+LMP=bin/lmp scripts/make_lmp_bundle.sh          # -> dist/maceles-lmp-env-*.tar.gz
+scripts/make_lmp_bundle.sh --check dist/*.tar.gz
+```
+
 ## 0. 依赖
 
 - Linux + NVIDIA GPU（A100 级；Mac/CPU 只能跑后处理）
