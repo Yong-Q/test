@@ -50,9 +50,9 @@ jobs:
             install -m 600 /dev/null /tmp/deploy_key
             printf '%s\n' "$DEPLOY_KEY" > /tmp/deploy_key
             export GIT_SSH_COMMAND="ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no"
-            git clone --depth 1 git@github.com:bonan-group/symmetrix-xl.git ../symmetrix-xl
+            git clone --depth 1 --recurse-submodules --shallow-submodules git@github.com:bonan-group/symmetrix-xl.git ../symmetrix-xl
           else
-            git clone --depth 1 https://github.com/bonan-group/symmetrix-xl.git ../symmetrix-xl
+            git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/bonan-group/symmetrix-xl.git ../symmetrix-xl
           fi
 
       - name: Build wheel

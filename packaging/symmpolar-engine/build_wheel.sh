@@ -22,7 +22,8 @@ OUT=${OUT:-$REPO/dist}
 if [[ ! -f "$SYMMETRIX_DIR/symmetrix/pyproject.toml" ]]; then
     echo "cloning $SYMMETRIX_REPO -> $SYMMETRIX_DIR"
     mkdir -p "$(dirname "$SYMMETRIX_DIR")"
-    git clone --depth 1 "$SYMMETRIX_REPO" "$SYMMETRIX_DIR"
+    git clone --depth 1 --recurse-submodules --shallow-submodules \
+        "$SYMMETRIX_REPO" "$SYMMETRIX_DIR"
 fi
 
 PATCH=$REPO/../symmetrix-polar/engine/maceles-les/0001-maceles-complete-LES-integration-with-charge-respons.patch
@@ -42,6 +43,10 @@ cp "$SYMMETRIX_DIR/symmetrix/pyproject.toml" "$BACKUP"
 trap 'cp "$BACKUP" "$SYMMETRIX_DIR/symmetrix/pyproject.toml"; rm -f "$BACKUP"' EXIT
 
 cp "$HERE/pyproject.toml" "$SYMMETRIX_DIR/symmetrix/pyproject.toml"
+if [[ ! -f "$SYMMETRIX_DIR/libsymmetrix/external/kokkos/CMakeLists.txt" ]]; then
+    echo "Kokkos submodule missing; run: git -C $SYMMETRIX_DIR submodule update --init --depth 1" >&2
+    exit 1
+fi
 NVCC_WRAPPER="$SYMMETRIX_DIR/libsymmetrix/external/kokkos/bin/nvcc_wrapper"
 if [[ ! -x "$NVCC_WRAPPER" ]]; then
     echo "nvcc_wrapper not found at $NVCC_WRAPPER" >&2
