@@ -11,9 +11,9 @@ HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO=$(cd -- "$HERE/../.." && pwd -P)
 SYMMETRIX_REPO=${SYMMETRIX_REPO:-https://github.com/Yong-Q/symmetrix-xl_polar.git}
 # Default: the MACELES/LES fork (Yong-Q/symmetrix-xl_polar, branch
-# `les-polar` = upstream 6c5f73b + one LES commit).  Set SYMMETRIX_REPO to
+# `polar-les` = upstream 6c5f73b + one LES commit).  Set SYMMETRIX_REPO to
 # the upstream URL and SYMMETRIX_REF=6c5f73b to build upstream + patch instead.
-SYMMETRIX_REF=${SYMMETRIX_REF:-les-polar}
+SYMMETRIX_REF=${SYMMETRIX_REF:-polar-les}
 SYMMETRIX_DIR=${1:-${SYMMETRIX_DIR:-}}
 if [[ -z "$SYMMETRIX_DIR" ]]; then
     SYMMETRIX_DIR=$REPO/build/symmetrix-xl
@@ -33,9 +33,9 @@ if [[ ! -f "$SYMMETRIX_DIR/symmetrix/pyproject.toml" ]]; then
 fi
 
 PATCH=""
-for _d in "$REPO/../symmetrix-polar/engine/les-polar" \
+for _d in "$REPO/../symmetrix-polar/engine/polar-les" \
           "$REPO/../symmetrix-polar/engine/maceles-les" \
-          "$REPO/engine/les-polar" "$REPO/engine/maceles-les"; do
+          "$REPO/engine/polar-les" "$REPO/engine/maceles-les"; do
     if [[ -f "$_d/0001-maceles-complete-LES-integration-with-charge-respons.patch" ]]; then
         PATCH="$_d/0001-maceles-complete-LES-integration-with-charge-respons.patch"
         break
@@ -55,11 +55,11 @@ elif [[ -f "$PATCH" ]]; then
 fi
 
 # The validated engine is upstream 6c5f73b + the LES commit (fork branch
-# `les-polar`).  Building the fork's `main` would silently drop LES.
+# `polar-les`).  Building the fork's `main` would silently drop LES.
 if [[ ! -f "$SYMMETRIX_DIR/libsymmetrix/source/les_ewald.hpp" ]]; then
     echo "ERROR: $SYMMETRIX_DIR has no LES (libsymmetrix/source/les_ewald.hpp" >&2
-    echo "       missing).  Check out the les-polar branch, not main:" >&2
-    echo "       git -C $SYMMETRIX_DIR checkout les-polar" >&2
+    echo "       missing).  Check out the polar-les branch, not main:" >&2
+    echo "       git -C $SYMMETRIX_DIR checkout polar-les" >&2
     exit 1
 fi
 if [[ -d "$SYMMETRIX_DIR/.git" ]]; then

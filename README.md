@@ -9,7 +9,7 @@
 |---|---|
 | 扫描 | 6 物种 × 10 密度（0.2–2.2 ρc，T = 1.55 Tc），每盒 3000 原子，100 ps 平衡 + 1 ns 生产 |
 | 运行 | 4 个分片在 q4 单卡并行：`t-20261102093724-5xdfw` / `-093733-cs6hz` / `-093805-vv7sk` / `-093812-klckg` |
-| 引擎 | 已冻结在 `ccdde6b`（上游 `6c5f73b` + LES commit），fork：`Yong-Q/symmetrix-xl_polar` 分支 `les-polar` |
+| 引擎 | 已冻结在 `ccdde6b`（上游 `6c5f73b` + LES commit），fork：`Yong-Q/symmetrix-xl_polar` 分支 `polar-les` |
 | 模型 | `assets/maceles_off/`（40 MB json + sm_80 cubin） |
 | 源码快照 | `assets/symmetrix-xl-6c5f73b-les-src.tar.gz`（离线可编） |
 
@@ -23,7 +23,7 @@ pip install packaging/symmpolar            # CLI: symmpolar check|smoke|scan
 scripts/setup_env.sh                       # 核对 numpy scipy ase matplotlib
 
 # B. 要跑 MD：需要引擎 + LAMMPS
-git clone --recurse-submodules -b les-polar \
+git clone --recurse-submodules -b polar-les \
     git@github.com:Yong-Q/symmetrix-xl_polar.git ~/engines/symmetrix-xl
 SYMMETRIX_DIR=~/engines/symmetrix-xl SYMMPOLAR_CUDA_ARCH="80;90" \
   packaging/symmpolar-engine/build_wheel.sh          # 引擎 wheel
@@ -64,8 +64,8 @@ analysis_scan/
 ## 已知约束
 
 - 工作区是 ~310 GB 的 per-scope 配额，且 worker 以 `nobody` 身份写时额度更小：轨迹逐条 gzip，默认 0.5 ps 一帧（`DUMP_EVERY=1000`）。
-- 引擎必须用 `les-polar`（含 `les_ewald.hpp`），`build_wheel.sh` 会自动校验，编到 `main` 会直接报错。
-- 上游 `symmetrix-xl` 已前进到 `93a747d`，**不要**用它直接编 LES；跟进上游时在 `les-polar` 上 rebase 并重跑力/能量验证。
+- 引擎必须用 `polar-les`（含 `les_ewald.hpp`），`build_wheel.sh` 会自动校验，编到 `main` 会直接报错。
+- 上游 `symmetrix-xl` 已前进到 `93a747d`，**不要**用它直接编 LES；跟进上游时在 `polar-les` 上 rebase 并重跑力/能量验证。
 
 ## 相关文档
 

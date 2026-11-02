@@ -13,7 +13,7 @@
 #   CONDA_LIB       extra library dir (OpenBLAS)   (default: <toolchain>/conda/envs/matos-compute/lib)
 #
 # The MACELES-LES integration itself lives in
-#   engine/les-polar/0001-maceles-complete-LES-integration-with-charge-respons.patch
+#   engine/polar-les/0001-maceles-complete-LES-integration-with-charge-respons.patch
 # and is applied to a clean symmetrix-xl checkout before building.  Skip the
 # patch step with APPLY_PATCH=0 if the checkout already contains it.
 set -euo pipefail
@@ -31,9 +31,9 @@ JOBS=${JOBS:-$(nproc)}
 CONDA_LIB=${CONDA_LIB:-/opt/matos-tools/conda/envs/matos-compute/lib}
 PATCH=${PATCH:-}
 if [[ -z "$PATCH" ]]; then
-for _d in "$REPO/../symmetrix-polar/engine/les-polar" \
+for _d in "$REPO/../symmetrix-polar/engine/polar-les" \
           "$REPO/../symmetrix-polar/engine/maceles-les" \
-          "$REPO/engine/les-polar" "$REPO/engine/maceles-les"; do
+          "$REPO/engine/polar-les" "$REPO/engine/maceles-les"; do
     if [[ -f "$_d/0001-maceles-complete-LES-integration-with-charge-respons.patch" ]]; then
         PATCH="$_d/0001-maceles-complete-LES-integration-with-charge-respons.patch"
         break

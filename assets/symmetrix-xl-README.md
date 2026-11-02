@@ -1,6 +1,6 @@
 # symmetrix-xl source snapshot (LES, pinned)
 
-> 在线版本：`git clone --recurse-submodules -b les-polar \
+> 在线版本：`git clone --recurse-submodules -b polar-les \
 > github.com/Yong-Q/symmetrix-xl_polar`（公开）. 这个 tar 是同一棵树的离线快照。
 
 `symmetrix-xl-6c5f73b-les-src.tar.gz` — complete buildable source tree of the

@@ -80,11 +80,11 @@ scripts/setup_env.sh --install                        # 检查/安装 numpy scip
 
 ### 引擎源码（fork）
 
-MACELES/LES 引擎在 `Yong-Q/symmetrix-xl_polar` 的 `les-polar` 分支
+MACELES/LES 引擎在 `Yong-Q/symmetrix-xl_polar` 的 `polar-les` 分支
 （上游 `6c5f73b` + 一个 LES commit，公开仓库）：
 
 ```bash
-git clone --recurse-submodules -b les-polar \
+git clone --recurse-submodules -b polar-les \
     git@github.com:Yong-Q/symmetrix-xl_polar.git ~/engines/symmetrix-xl
 SYMMETRIX_DIR=~/engines/symmetrix-xl SYMMPOLAR_CUDA_ARCH="80;90" \
   packaging/symmpolar-engine/build_wheel.sh
@@ -117,7 +117,7 @@ export LMP=$SYMMETRIX_DIR/symmetrix/build-lammps-les/lmp
 ```
 
 脚本做三件事：`pair_symmetrix/install.sh` 把 pair style 装进 LAMMPS 源码、
-应用 `engine/les-polar/0001-*.patch`（已应用会自动跳过）、cmake+make
+应用 `engine/polar-les/0001-*.patch`（已应用会自动跳过）、cmake+make
 （Kokkos CUDA、无 MPI）。
 
 ## 3. 冒烟测试（2 分钟，需要 GPU）
