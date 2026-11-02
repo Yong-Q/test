@@ -51,8 +51,8 @@ jobs:
             install -m 600 /dev/null /tmp/deploy_key
             printf '%s\n' "$DEPLOY_KEY" > /tmp/deploy_key
             export GIT_SSH_COMMAND="ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no"
-            export SYMMETRIX_REPO=git@github.com:bonan-group/symmetrix-xl.git
           fi
+          # default SYMMETRIX_REPO is the public fork, branch maceles-les
           chmod +x packaging/symmpolar-engine/build_wheel.sh
           packaging/symmpolar-engine/build_wheel.sh
           ls -lh dist

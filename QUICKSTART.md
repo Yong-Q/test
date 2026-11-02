@@ -77,6 +77,22 @@ scripts/setup_env.sh --install                        # 检查/安装 numpy scip
 没有 conda 时：`python3 -m venv .venv && . .venv/bin/activate && scripts/setup_env.sh --install`
 
 
+
+### 引擎源码（fork）
+
+MACELES/LES 引擎在 `Yong-Q/symmetrix-xl_polar` 的 `maceles-les` 分支
+（上游 `6c5f73b` + 一个 LES commit，公开仓库）：
+
+```bash
+git clone --recurse-submodules -b maceles-les \
+    git@github.com:Yong-Q/symmetrix-xl_polar.git ~/engines/symmetrix-xl
+SYMMETRIX_DIR=~/engines/symmetrix-xl SYMMPOLAR_CUDA_ARCH="80;90" \
+  packaging/symmpolar-engine/build_wheel.sh
+```
+
+`build_wheel.sh` 默认就从这里拉（`SYMMETRIX_REPO` / `SYMMETRIX_REF` 可覆盖）；
+离线场景用 `assets/symmetrix-xl-6c5f73b-les-src.tar.gz` 快照。
+
 ## 1.5 pip 安装（可选，替代源码编译引擎）
 
 ```bash

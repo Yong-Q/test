@@ -9,11 +9,11 @@ set -euo pipefail
 
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 REPO=$(cd -- "$HERE/../.." && pwd -P)
-SYMMETRIX_REPO=${SYMMETRIX_REPO:-git@github.com:bonan-group/symmetrix-xl.git}
-# Upstream moves; the LES patch was generated against this exact base, so a
-# fresh clone is pinned to it.  Point SYMMETRIX_REF at a fork's tip if the
-# patch is already committed there.
-SYMMETRIX_REF=${SYMMETRIX_REF:-6c5f73b}
+SYMMETRIX_REPO=${SYMMETRIX_REPO:-https://github.com/Yong-Q/symmetrix-xl_polar.git}
+# Default: the MACELES/LES fork (Yong-Q/symmetrix-xl_polar, branch
+# `maceles-les` = upstream 6c5f73b + one LES commit).  Set SYMMETRIX_REPO to
+# the upstream URL and SYMMETRIX_REF=6c5f73b to build upstream + patch instead.
+SYMMETRIX_REF=${SYMMETRIX_REF:-maceles-les}
 SYMMETRIX_DIR=${1:-${SYMMETRIX_DIR:-}}
 if [[ -z "$SYMMETRIX_DIR" ]]; then
     SYMMETRIX_DIR=$REPO/build/symmetrix-xl
@@ -44,6 +44,20 @@ elif [[ -f "$PATCH" ]]; then
     else
         echo "WARNING: LES patch neither applies nor is applied" >&2
     fi
+fi
+
+# The validated engine is upstream 6c5f73b + the LES commit (fork branch
+# `maceles-les`).  Building the fork's `main` would silently drop LES.
+if [[ ! -f "$SYMMETRIX_DIR/libsymmetrix/source/les_ewald.hpp" ]]; then
+    echo "ERROR: $SYMMETRIX_DIR has no LES (libsymmetrix/source/les_ewald.hpp" >&2
+    echo "       missing).  Check out the maceles-les branch, not main:" >&2
+    echo "       git -C $SYMMETRIX_DIR checkout maceles-les" >&2
+    exit 1
+fi
+if [[ -d "$SYMMETRIX_DIR/.git" ]]; then
+    echo "engine tree: $(git -C "$SYMMETRIX_DIR" log --oneline -1)"
+else
+    echo "engine tree: source snapshot (no .git)"
 fi
 
 BACKUP=$(mktemp)
