@@ -167,7 +167,7 @@ def _hbonds(atoms, sym, acceptors):
 # per-state analysis
 # ----------------------------------------------------------------------------
 def analyze_state(traj, species, outdir, n_frames=200, rdf_frames=20,
-                  hb_frames=50, rng_seed=0):
+                  hb_frames=50, rng_seed=0, pairs=True, pair_frames=20):
     """Return a dict of scalars; also writes ``analysis/profiles.npz``."""
     out = Path(outdir)
     out.mkdir(parents=True, exist_ok=True)
@@ -271,6 +271,24 @@ def analyze_state(traj, species, outdir, n_frames=200, rdf_frames=20,
         "coordination": coord,
         "pair_label": f"{central_sym}-{central_sym}",
     }
+    if pairs:
+        from sampling.pair_correlations import pair_correlations
+        pframes = []
+        pstride = max(1, total // max(1, pair_frames))
+        for idx, atoms in enumerate(iter_frames(traj, 1)):
+            if idx % pstride == 0:
+                pframes.append(atoms)
+            if len(pframes) >= pair_frames:
+                break
+        pc = pair_correlations(pframes, rmax=RDF_RMAX, bins=RDF_BINS)
+        np.savez(out / "pairs.npz", **{k: v for k, v in pc.items()})
+        rec["pairs_file"] = "pairs.npz"
+        rec["pairs"] = sorted(k[2:] for k in pc if k.startswith("g_"))
+        rec["anisotropy_l1_max"] = float(max(
+            [np.max(v) for k, v in pc.items() if k.startswith("a1_")] or [0.0]))
+        rec["anisotropy_l2_max"] = float(max(
+            [np.max(v) for k, v in pc.items() if k.startswith("a2_")] or [0.0]))
+
     np.savez(out / "profiles.npz", r_pair=r_pair, g_pair=g_pair,
              r_xh=r_xh, g_xh=g_xh, bonds=bonds, p2=p2, q_tet=qtet,
              orient_axis=orient_axis, orient_theta=otheta, orient_phi=ophi)
@@ -322,7 +340,8 @@ def discover_states(root: Path):
 
 
 def run_states(root: Path, outdir: Path, force=False, n_frames=200,
-               c2_stride=10, rmax=None, c2_bins=80, verbose=True):
+               c2_stride=10, rmax=None, c2_bins=80, verbose=True,
+               pairs=True, pair_frames=20, prune_traj=False):
     from sampling.les_c1c2 import analyze_trajectory
     rows = []
     for sid, species, temp, rho, state, traj in discover_states(root):
@@ -337,7 +356,8 @@ def run_states(root: Path, outdir: Path, force=False, n_frames=200,
         if verbose:
             print(f"[scan] {sid}: {traj}")
         struct = analyze_state(traj, species, ana / "analysis",
-                               n_frames=n_frames)
+                               n_frames=n_frames, pairs=pairs,
+                               pair_frames=pair_frames)
         c1c2 = ana / "c1c2"
         try:
             c1, dens = analyze_trajectory(
@@ -352,6 +372,12 @@ def run_states(root: Path, outdir: Path, force=False, n_frames=200,
                "c1c2_dirs": {"f1": str(c1c2 / "f1"),
                              "f2": str(c1c2 / "f2")}}
         rec_path.write_text(json.dumps(rec, indent=2, default=str))
+        if prune_traj:
+            try:
+                Path(traj).unlink()
+                print(f"[scan] pruned {traj}")
+            except OSError as exc:
+                print(f"[scan] could not prune {traj}: {exc}")
         rows.append(rec)
     return rows
 
@@ -507,6 +533,11 @@ def main(argv=None):
     ap.add_argument("--c2-stride", type=int, default=10)
     ap.add_argument("--c2-bins", type=int, default=80)
     ap.add_argument("--rmax", type=float, default=None)
+    ap.add_argument("--no-pairs", action="store_true",
+                    help="skip the all-pair g(r)/anisotropy block")
+    ap.add_argument("--pair-frames", type=int, default=20)
+    ap.add_argument("--prune-traj", action="store_true",
+                    help="delete each trajectory once its analysis is written")
     args = ap.parse_args(argv)
     root = Path(args.root)
     out = Path(args.out) if args.out else root / "analysis_scan"
@@ -520,7 +551,9 @@ def main(argv=None):
     if args.stage in ("all", "state"):
         run_states(root, out, force=args.force, n_frames=args.frames,
                    c2_stride=args.c2_stride, rmax=args.rmax,
-                   c2_bins=args.c2_bins)
+                   c2_bins=args.c2_bins, pairs=not args.no_pairs,
+                   pair_frames=args.pair_frames,
+                   prune_traj=args.prune_traj)
     if args.stage in ("all", "aggregate"):
         aggregate(out, rho_c=rho_c)
     return 0
