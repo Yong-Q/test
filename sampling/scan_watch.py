@@ -22,6 +22,10 @@ from sampling.scan_analysis import aggregate, discover_states, run_states
 def pending(root: Path, out: Path):
     todo = []
     for sid, sp, temp, rho, state, traj in discover_states(root):
+        # only states whose MD has finished: meta.json is written after the
+        # trajectory is gzipped and closed
+        if not (state / "meta.json").exists():
+            continue
         if not (out / sid / "analysis.json").exists():
             todo.append((sid, state, traj))
     return todo
