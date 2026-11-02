@@ -82,7 +82,7 @@ def _mic(vec, cell):
 
 def _p2_axes(pos, cell):
     """cos^2(z) of each molecule's principal (largest-variance) axis."""
-    rel = pos - pos.mean(axis=1, keepdims=True)
+    rel = pos - pos[:, 0:1, :]            # relative to the central (heavy) atom
     rel = _mic(rel, cell)
     cov = np.einsum("mki,mkj->mij", rel, rel)
     _, vec = np.linalg.eigh(cov)          # ascending eigenvalues
@@ -93,7 +93,7 @@ def _p2_axes(pos, cell):
 def _orient_axes(pos, cell):
     """Principal axes of each molecule and the spherical angles (theta, phi)
     of the largest-variance axis (the molecular orientation)."""
-    rel = pos - pos.mean(axis=1, keepdims=True)
+    rel = pos - pos[:, 0:1, :]            # relative to the central (heavy) atom
     rel = _mic(rel, cell)
     cov = np.einsum("mki,mkj->mij", rel, rel)
     _, vec = np.linalg.eigh(cov)          # ascending eigenvalues
