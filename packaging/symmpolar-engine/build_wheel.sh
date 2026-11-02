@@ -33,7 +33,9 @@ if [[ ! -f "$SYMMETRIX_DIR/symmetrix/pyproject.toml" ]]; then
 fi
 
 PATCH=$REPO/../symmetrix-polar/engine/maceles-les/0001-maceles-complete-LES-integration-with-charge-respons.patch
-if [[ -f "$PATCH" ]]; then
+if [[ ! -d "$SYMMETRIX_DIR/.git" ]]; then
+    echo "no .git in $SYMMETRIX_DIR (source snapshot); assuming LES is already in the tree"
+elif [[ -f "$PATCH" ]]; then
     cd "$SYMMETRIX_DIR"
     if git apply --check "$PATCH" >/dev/null 2>&1; then
         git apply "$PATCH"; echo "applied LES patch"
