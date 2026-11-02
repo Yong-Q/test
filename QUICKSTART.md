@@ -25,6 +25,47 @@ sampling/scan_analysis.py       c1/c2(f1,f2) + g(r)/取向/氢键/四面体序 �
 - LAMMPS `stable_30Sep2026` 源码 + `pair_symmetrix` 包（脚本会自动安装）
   - 需要 `git@github.com:bonan-group/symmetrix-xl.git` 的读权限
 
+
+## 0.5 模型资产（两个文件，不在 git 里）
+
+`pair_style symmetrix/mace/float32/kk ... streamed_edges direct` 必须给一个
+`jit_device_artifact`，所以每次运行都要这两个文件：
+
+| 文件 | 大小 | 是什么 |
+|---|---|---|
+| `maceles_off_chno.json` | 41 MB | 官方 **MACELES-OFF** 权重导出成 Symmetrix/Kokkos 引擎格式（权重 + fusion basis + `les_norm_factor`）。**不是** PyTorch 的 `.pth` |
+| `maceles_off.cubin` | 226 KB | 该模型 R1 直执行算子的 CUDA 预编译产物；`streamed_edges direct` 没有它就拒绝启动 |
+
+仓库 `.gitignore` 排除了 `models/` 和 `bench/`，所以它们属于**工作区资产**，不在 git 里。
+
+**A. 从现有工作区拷（最快，推荐）**
+
+```bash
+rsync -av <现有工作区>/bza/symmetrix-polar/models/maceles_off_chno.json ./assets/
+rsync -av <现有工作区>/bza/symmetrix-polar/bench/q4_maceles_off/attempt-03/maceles_off.cubin ./assets/
+sha256sum assets/maceles_off_chno.json assets/maceles_off.cubin
+# b0e346bbe83306c1b1f73193a54cfaba9ff140788aff71847a10cc3539937431
+# acb7f274d5273f2cd072533d56a39d5e9831e4355d9501d57492233ebd8b26e5
+export MODEL=$PWD/assets/maceles_off_chno.json CUBIN=$PWD/assets/maceles_off.cubin
+```
+
+**B. 从官方 checkpoint 重新导出 json**（需要 MACELES 的 `.pth` + 装好 symmetrix Python 包）
+
+```bash
+python symmetrix/source/symmetrix/extract_maceles.py \
+    --model maceles_off.pth --output maceles_off_chno.json
+```
+
+**C. 只有 json、需要重新生成 cubin**（换了 GPU 架构，如 A100→H100 时必须重编）
+
+```bash
+python -m symmetrix.cli.prepare_jit_device_artifact \
+    --model maceles_off_chno.json --precision float32 --lammps-arguments
+# 输出直接可粘到 pair_style 后面；成功后会打印 artifact 路径
+```
+
+注意：cubin 是针对具体 GPU 架构编译的，跨架构（sm_80 → sm_90）会加载失败，用 C 重新生成。
+
 ## 1. 环境（1 分钟）
 
 ```bash
