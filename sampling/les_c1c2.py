@@ -224,7 +224,7 @@ def write_lammps_input(workdir, data, model, cubin, elements, temperature,
     else:
         equil_block = f"fix 1 all nvt temp {temperature:g} {temperature:g} 0.1\n"
     text = f"""units metal
-atom_style atomic/kk
+atom_style molecular/kk
 atom_modify map yes
 boundary p p p
 package kokkos neigh half newton on
@@ -239,7 +239,7 @@ velocity all create {t_start:g} {seed} mom yes rot no dist gaussian
 thermo {dump_every}
 thermo_style custom step temp pe
 run_style verlet/kk
-{equil_block}dump 1 all custom {dump_every} traj.dump id type x y z fx fy fz
+{equil_block}dump 1 all custom {dump_every} traj.dump id mol type x y z fx fy fz
 dump_modify 1 sort id
 run {steps}
 """

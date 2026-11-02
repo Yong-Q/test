@@ -79,11 +79,12 @@ def rescaled_data(src: Path, dst: Path, rho_target: float, n_mol: int,
         fh.write(f"0.0 {L[0]:.10f} zlo zhi\n\nMasses\n\n")
         for t in range(1, 5):
             fh.write(f"{t} {masses[t]:.3f}\n")
-        fh.write("\nAtoms # atomic\n\n")
+        fh.write("\nAtoms # molecular\n\n")
         for i, (s, p) in enumerate(zip(atoms.get_chemical_symbols(),
                                        atoms.get_positions()), 1):
             typ = {"C": 1, "H": 2, "N": 3, "O": 4}[s]
-            fh.write(f"{i} {typ} {p[0]:.10f} {p[1]:.10f} {p[2]:.10f}\n")
+            mol = (i - 1) // natoms_per_mol + 1
+            fh.write(f"{i} {mol} {typ} {p[0]:.10f} {p[1]:.10f} {p[2]:.10f}\n")
     return rho0
 
 

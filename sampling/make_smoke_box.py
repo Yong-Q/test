@@ -61,9 +61,10 @@ def build(out: Path, seed=7):
                  f"0.0 {L:.10f} zlo zhi\n\nMasses\n\n")
         for t in range(1, 5):
             fh.write(f"{t} {MASSES[t]:.3f}\n")
-        fh.write("\nAtoms # atomic\n\n")
+        fh.write("\nAtoms # molecular\n\n")
         for i, (t, p) in enumerate(zip(typ, pos), 1):
-            fh.write(f"{i} {t} {p[0]:.10f} {p[1]:.10f} {p[2]:.10f}\n")
+            mol = (i - 1) // 3 + 1
+            fh.write(f"{i} {mol} {t} {p[0]:.10f} {p[1]:.10f} {p[2]:.10f}\n")
     man = out / "manifest.csv"
     with open(man, "w", newline="") as fh:
         w = csv.writer(fh)
