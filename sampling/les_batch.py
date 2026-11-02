@@ -278,7 +278,7 @@ def run_row(row: dict, args, outroot: Path) -> dict:
 WORKSPACE_OWNER_UID = 166536
 
 
-def drop_to_workspace_owner() -> None:
+def drop_to_workspace_owner(outroot=None) -> None:
     """Run as the workspace owner so outputs land in the right quota.
 
     On root-squashed vePFS nodes a root process writes files owned by
@@ -289,6 +289,21 @@ def drop_to_workspace_owner() -> None:
     if os.getuid() != 0:
         print(f"[batch] running as uid {os.getuid()}, not dropping privileges")
         return
+    # Existing output directories may be owned by another uid (e.g. an
+    # earlier attempt that ran unsquashed); hand them to 166536 before the
+    # uid switch, otherwise the drop has no write permission.
+    if outroot:
+        import subprocess
+        target = Path(outroot)
+        while target != target.parent and not target.exists():
+            target = target.parent
+        for path in [target] + sorted(target.rglob("*")):
+            try:
+                os.chown(path, WORKSPACE_OWNER_UID, WORKSPACE_OWNER_UID)
+            except OSError:
+                pass
+        subprocess.run(["chmod", "-R", "u+rwX,g+rwX", str(target)],
+                       check=False, capture_output=True)
     try:
         os.setgroups([])
         os.setgid(WORKSPACE_OWNER_UID)
@@ -345,7 +360,7 @@ def main(argv=None) -> int:
         ap.error("choose one of --run / --analyze-only")
 
     if (args.run or args.analyze_only) and not getattr(args, "no_drop_priv", False):
-        drop_to_workspace_owner()
+        drop_to_workspace_owner(args.outroot)
 
     manifest = Path(args.manifest)
     if args.template:
