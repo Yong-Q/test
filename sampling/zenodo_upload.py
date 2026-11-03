@@ -131,6 +131,9 @@ def main(argv=None):
     ap.add_argument("--key", help="remote key for --single-file")
     ap.add_argument("--delete-after", action="store_true",
                     help="delete --single-file once the upload returns 2xx")
+    ap.add_argument("--bundle-states", action="store_true",
+                    help="tar each <root>/<sim_id>/ into _bundles/<sim_id>.tar.gz "
+                         "and upload that instead of the loose files")
     args = ap.parse_args(argv)
 
     if args.single_file:
@@ -171,13 +174,29 @@ def main(argv=None):
         state_path.write_text(json.dumps(state, indent=2))
         update_metadata(dep_id, meta)
     bucket = dep["links"]["bucket"]
+    if args.bundle_states:
+        import tarfile
+        bdir = root / "_bundles"
+        bdir.mkdir(exist_ok=True)
+        for state in sorted(p for p in root.iterdir() if p.is_dir()):
+            if state.name.startswith("_"):
+                continue
+            tgt = bdir / f"{state.name}.tar.gz"
+            sig = (tgt.stat().st_size, int(tgt.stat().st_mtime)) if tgt.exists() else None
+            if sig is None:
+                print(f"[zenodo] bundling {state.name}")
+                with tarfile.open(tgt, "w:gz") as tf:
+                    tf.add(state, arcname=state.name)
 
     while True:
         uploaded = state.setdefault("files", {})
         n = 0
-        for key, path, sig in pending_files(root, uploaded):
+        scan_root = root
+        for key, path, sig in pending_files(scan_root, uploaded):
             if key.startswith(".zenodo_state"):
                 continue
+            if key.startswith("_bundles/"):
+                key = "states/" + key[len("_bundles/"):]
             if upload_file(bucket, path, key):
                 uploaded[key] = sig
                 n += 1
