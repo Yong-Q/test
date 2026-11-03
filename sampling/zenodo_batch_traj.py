@@ -20,7 +20,7 @@ import os
 import time
 from pathlib import Path
 
-from sampling.zenodo_upload import upload
+from sampling.zenodo_upload import create_draft, upload
 
 
 def finished(root: Path, state_file: Path):
@@ -47,6 +47,9 @@ def main(argv=None):
     ap.add_argument("--record-id", required=True)
     ap.add_argument("--batch", type=int, default=3)
     ap.add_argument("--watch", type=float, default=0)
+    ap.add_argument("--max-bytes", type=float, default=45e9,
+                    help="roll over to a new Zenodo record before this size "
+                         "(Zenodo's limit is 50 GB per record)")
     ap.add_argument("--delete-after", action="store_true",
                     help="remove the local file once Zenodo confirmed it "
                          "(default: keep it, space is not the constraint)")
@@ -63,16 +66,25 @@ def main(argv=None):
             time.sleep(max(60, args.watch))
             continue
         todo = todo[:max(1, args.batch)]
+        recs = state.setdefault("records", [{"id": args.record_id, "bytes": 0}])
         print(f"[traj {time.strftime('%H:%M:%S')}] {len(todo)} to upload "
-              f"({len(done)} done)")
+              f"({len(done)} done, {len(recs)} record(s), "
+              f"{recs[-1]['bytes']/1e9:.1f} GB in the last)")
         for sid, traj in todo:
             key = f"trajectories/{sid}.dump.gz" if traj.suffix == ".gz" \
                 else f"trajectories/{sid}.dump"
-            ok = upload(args.record_id, key, traj)
+            size = traj.stat().st_size
+            if recs[-1]["bytes"] + size > args.max_bytes:
+                rec = create_draft("trajectories")
+                recs.append({"id": rec["id"], "bytes": 0})
+                print(f"[traj] rolled over to record {rec['id']}")
+            ok = upload(recs[-1]["id"], key, traj)
             if ok:
                 if args.delete_after:
                     traj.unlink()
-                done[sid] = {"key": key, "bytes": None}
+                recs[-1]["bytes"] += size
+                done[sid] = {"key": key, "record": recs[-1]["id"],
+                             "bytes": size}
                 state_file.write_text(json.dumps(done, indent=2))
                 print(f"[traj] uploaded {traj}" + (" and removed" if args.delete_after else ""))
             else:
