@@ -1,26 +1,29 @@
 #!/usr/bin/env python3
-"""Mirror a scan's analysis output to a Zenodo deposition, continuously.
+"""Mirror scan output to Zenodo (new InvenioRDM records API).
 
-Zenodo records are immutable once published, but files can be added to an
-*unpublished* deposition at any time.  This keeps one draft deposition open and
-uploads every new/changed file under ``analysis_scan/`` (c1/c2, pair and
-intramolecular statistics, figures, summaries).  Publish once at the end — or
-publish periodically and bump the version.
+Zenodo replaced the legacy ``/api/depositions`` API; this client uses the
+current one:
 
-    export ZENODO_TOKEN=...            # scopes: deposit:write, deposit:actions
-    python -m sampling.zenodo_upload --root bench/maceles_density_scan/analysis_scan \
-        --deposition-id 123456 --watch 600
+    POST   /api/records                       create a draft
+    POST   /api/records/{id}/draft/files      initialise a file
+    PUT    /api/records/{id}/draft/files/{k}/content
+    POST   /api/records/{id}/draft/files/{k}/commit
+    POST   /api/records/{id}/draft/actions/publish
 
-    # first run without --deposition-id creates the draft and prints its id
-    # add --publish when you want the DOI (record becomes read-only)
+A draft stays editable until published: files can be added, replaced (same key)
+or deleted as often as needed; publishing mints the DOI and freezes the record
+(later changes need a new version).
 
-Environment:
-    ZENODO_TOKEN   personal access token (required, never commit it)
-    ZENODO_API     default https://zenodo.org/api
-                   use https://sandbox.zenodo.org/api while testing
+Two records keep raw trajectories and post-processing separate::
 
-Files are addressed by their path relative to --root, so re-uploads overwrite
-the same key instead of duplicating.
+    export ZENODO_TOKEN=...
+    python -m sampling.zenodo_upload --root .../analysis_scan --kind analysis \
+        --bundle-states --watch 1800
+    python -m sampling.zenodo_upload --single-file traj.dump.gz \
+        --key trajectories/<sim>.dump.gz --record-id <traj-record> --delete-after
+
+Without ``--record-id`` the first run creates a draft, prints its id and stores
+it in ``<root>/.zenodo_record.json``.
 """
 from __future__ import annotations
 
@@ -32,118 +35,157 @@ from pathlib import Path
 
 import requests
 
-DEFAULT_METADATA = {
-    "title": "MACELES PRL density scan — c1/c2 and pair correlations",
-    "upload_type": "dataset",
-    "description": (
-        "Bulk molecular dynamics with the MACELES (MACE + Latent Ewald "
-        "Summation) engine: c1/c2, partial g(r) with anisotropy, "
-        "intramolecular geometry, molecular axes, COM/MSD, per state."
-    ),
-    "creators": [{"name": "Qiu, Yong"}],
+API = os.environ.get("ZENODO_API", "https://zenodo.org/api").rstrip("/")
+
+BASE_META = {
+    "publication_date": "2026-11-03",
+    "resource_type": {"id": "dataset"},
+    "license": {"id": "cc-by-4.0"},
+    "creators": [{"person_or_org": {"type": "personal", "name": "Qiu, Yong"}}],
     "keywords": ["cDFT", "MACELES", "latent Ewald summation", "c1/c2", "g(r)"],
-    "access_right": "open",
-    "license": "cc-by-4.0",
+}
+
+PRESETS = {
+    "analysis": {
+        "title": "MACELES PRL density scan — c1/c2 and pair correlations",
+        "description": (
+            "Post-processing of the MACELES (MACE + Latent Ewald Summation) "
+            "bulk density scan: c1/c2 (rho, Vext, mu, r, c2, c2k), all-pair "
+            "g(r) with spherical-harmonic anisotropy, intramolecular bond "
+            "lengths/angles/dihedrals, molecular axes with rotational "
+            "correlation, centre-of-mass trajectories and MSD, per state."
+        ),
+    },
+    "trajectories": {
+        "title": "MACELES PRL density scan — raw trajectories",
+        "description": (
+            "Raw LAMMPS trajectories (dump: id mol type x y z fx fy fz) of the "
+            "MACELES bulk density scan, 0.5 ps frames, one file per state."
+        ),
+    },
 }
 
 
-def _api() -> str:
-    return os.environ.get("ZENODO_API", "https://zenodo.org/api").rstrip("/")
-
-
-def _headers() -> dict:
+def _headers():
     token = os.environ.get("ZENODO_TOKEN")
     if not token:
-        raise SystemExit("ZENODO_TOKEN is not set "
-                         "(create one at zenodo.org/account/settings/applications)")
+        path = Path("/workspace/group/shared/bza/.secrets/zenodo_token")
+        if path.exists():
+            token = path.read_text().strip()
+    if not token:
+        raise SystemExit("ZENODO_TOKEN is not set")
     return {"Authorization": f"Bearer {token}"}
 
 
-def create_deposition(metadata=None) -> dict:
-    r = requests.post(f"{_api()}/depositions",
-                      json={"metadata": metadata or DEFAULT_METADATA},
+def _meta(kind, overrides=None):
+    meta = dict(BASE_META)
+    meta.update(PRESETS.get(kind, PRESETS["analysis"]))
+    if overrides:
+        meta.update(overrides)
+    return meta
+
+
+def create_draft(kind, overrides=None):
+    r = requests.post(f"{API}/records",
+                      json={"metadata": _meta(kind, overrides),
+                            "files": {"enabled": True}},
                       headers=_headers(), timeout=60)
     r.raise_for_status()
-    dep = r.json()
-    print(f"[zenodo] created deposition {dep['id']} (draft)")
-    return dep
+    rec = r.json()
+    print(f"[zenodo] created draft {rec['id']} ({rec['metadata']['title']})")
+    return rec
 
 
-def get_deposition(dep_id) -> dict:
-    r = requests.get(f"{_api()}/depositions/{dep_id}",
-                     headers=_headers(), timeout=60)
+def get_draft(record_id):
+    r = requests.get(f"{API}/records/{record_id}/draft", headers=_headers(),
+                     timeout=60)
     r.raise_for_status()
     return r.json()
 
 
-def update_metadata(dep_id, metadata):
-    r = requests.put(f"{_api()}/depositions/{dep_id}",
-                     json={"metadata": metadata},
+def list_files(record_id):
+    r = requests.get(f"{API}/records/{record_id}/draft/files",
                      headers=_headers(), timeout=60)
     if r.status_code >= 400:
-        print(f"[zenodo] metadata update failed: {r.status_code} {r.text[:200]}")
-    return r.ok
+        return {}
+    return {e["key"]: e.get("size", 0) for e in r.json().get("entries", [])}
 
 
-def upload_file(bucket: str, local: Path, key: str) -> bool:
-    url = f"{bucket.rstrip('/')}/{key}"
-    with open(local, "rb") as fh:
-        r = requests.put(url, data=fh, headers=_headers(), timeout=600)
+def delete_file(record_id, key):
+    requests.delete(f"{API}/records/{record_id}/draft/files/{key}",
+                    headers=_headers(), timeout=60)
+
+
+def upload(record_id, key, path: Path) -> bool:
+    key = key.replace(os.sep, "/")
+    if key in list_files(record_id):
+        delete_file(record_id, key)
+    r = requests.post(f"{API}/records/{record_id}/draft/files",
+                      json=[{"key": key}], headers=_headers(), timeout=60)
     if r.status_code >= 400:
-        print(f"[zenodo] upload failed {key}: {r.status_code} {r.text[:200]}")
+        print(f"[zenodo] init failed {key}: {r.status_code} {r.text[:200]}")
         return False
-    print(f"[zenodo] uploaded {key} ({local.stat().st_size/1e6:.1f} MB)")
+    with open(path, "rb") as fh:
+        r = requests.put(f"{API}/records/{record_id}/draft/files/{key}/content",
+                         data=fh,
+                         headers={**_headers(),
+                                  "Content-Type": "application/octet-stream"},
+                         timeout=3600)
+    if r.status_code >= 400:
+        print(f"[zenodo] put failed {key}: {r.status_code} {r.text[:200]}")
+        return False
+    r = requests.post(f"{API}/records/{record_id}/draft/files/{key}/commit",
+                      headers=_headers(), timeout=120)
+    if r.status_code >= 400:
+        print(f"[zenodo] commit failed {key}: {r.status_code} {r.text[:200]}")
+        return False
+    print(f"[zenodo] uploaded {key} ({path.stat().st_size/1e6:.1f} MB)")
     return True
 
 
-def publish(dep_id):
-    r = requests.post(f"{_api()}/depositions/{dep_id}/actions/publish",
-                      headers=_headers(), timeout=120)
+def publish(record_id):
+    r = requests.post(f"{API}/records/{record_id}/draft/actions/publish",
+                      headers=_headers(), timeout=300)
     if r.status_code >= 400:
         print(f"[zenodo] publish failed: {r.status_code} {r.text[:300]}")
         return False
-    print(f"[zenodo] published {dep_id}: {r.json().get('links', {}).get('doi')}")
+    rec = r.json()
+    print(f"[zenodo] published {record_id}: {rec.get('links', {}).get('doi')}")
     return True
 
 
-def pending_files(root: Path, uploaded: dict):
-    """Yield (key, path) for files that are new or whose size/mtime changed."""
+def pending(root: Path, seen: dict):
     for p in sorted(root.rglob("*")):
         if not p.is_file():
             continue
         key = str(p.relative_to(root))
         sig = (p.stat().st_size, int(p.stat().st_mtime))
-        if uploaded.get(key) != sig:
+        if seen.get(key) != sig:
             yield key, p, sig
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--root", help="directory to mirror (required unless --single-file)")
-    ap.add_argument("--deposition-id")
+    ap.add_argument("--root", help="directory to mirror")
+    ap.add_argument("--record-id", help="existing Zenodo draft/record id")
+    ap.add_argument("--kind", choices=["analysis", "trajectories"],
+                    default="analysis")
     ap.add_argument("--watch", type=float, default=0,
                     help="seconds between scans (0 = one pass)")
     ap.add_argument("--publish", action="store_true")
-    ap.add_argument("--metadata", help="JSON file with Zenodo metadata")
-    ap.add_argument("--state", default=None,
-                    help="upload bookkeeping (default <root>/.zenodo_state.json)")
-    ap.add_argument("--single-file", help="upload just this file (with --key)")
-    ap.add_argument("--key", help="remote key for --single-file")
-    ap.add_argument("--delete-after", action="store_true",
-                    help="delete --single-file once the upload returns 2xx")
     ap.add_argument("--bundle-states", action="store_true",
-                    help="tar each <root>/<sim_id>/ into _bundles/<sim_id>.tar.gz "
-                         "and upload that instead of the loose files")
+                    help="tar each <root>/<state>/ into _bundles/<state>.tar.gz")
+    ap.add_argument("--single-file", help="upload one file (with --key)")
+    ap.add_argument("--key", help="remote key for --single-file")
+    ap.add_argument("--delete-after", action="store_true")
+    ap.add_argument("--state", default=None)
     args = ap.parse_args(argv)
 
     if args.single_file:
-        if not args.deposition_id or not args.key:
-            raise SystemExit("--single-file needs --deposition-id and --key")
-        dep = get_deposition(args.deposition_id)
-        if dep.get("status") == "published":
-            raise SystemExit("deposition is published (read-only)")
+        if not args.record_id or not args.key:
+            raise SystemExit("--single-file needs --record-id and --key")
         src = Path(args.single_file)
-        ok = upload_file(dep["links"]["bucket"], src, args.key)
+        ok = upload(args.record_id, args.key, src)
         if ok and args.delete_after:
             src.unlink()
             print(f"[zenodo] deleted local {src}")
@@ -154,56 +196,46 @@ def main(argv=None):
     root = Path(args.root)
     if not root.is_dir():
         raise SystemExit(f"not a directory: {root}")
-    meta = DEFAULT_METADATA
-    if args.metadata:
-        meta = json.loads(Path(args.metadata).read_text())
-    state_path = Path(args.state) if args.state else root / ".zenodo_state.json"
+    state_path = Path(args.state) if args.state else root / ".zenodo_record.json"
     state = json.loads(state_path.read_text()) if state_path.exists() else {}
 
-    dep_id = args.deposition_id or state.get("deposition_id")
-    if dep_id:
-        dep = get_deposition(dep_id)
-        print(f"[zenodo] reusing deposition {dep_id} ({dep.get('status', 'draft')})")
-        if dep.get("status") == "published":
-            print("[zenodo] WARNING: the deposition is published (read-only); "
-                  "create a new version to add files")
+    rec_id = args.record_id or state.get("record_id")
+    if rec_id:
+        print(f"[zenodo] using draft {rec_id}")
     else:
-        dep = create_deposition(meta)
-        dep_id = dep["id"]
-        state["deposition_id"] = dep_id
+        rec = create_draft(args.kind)
+        rec_id = rec["id"]
+        state["record_id"] = rec_id
         state_path.write_text(json.dumps(state, indent=2))
-        update_metadata(dep_id, meta)
-    bucket = dep["links"]["bucket"]
+
     if args.bundle_states:
         import tarfile
         bdir = root / "_bundles"
         bdir.mkdir(exist_ok=True)
-        for state in sorted(p for p in root.iterdir() if p.is_dir()):
-            if state.name.startswith("_"):
+        for st in sorted(p for p in root.iterdir() if p.is_dir()):
+            if st.name.startswith("_"):
                 continue
-            tgt = bdir / f"{state.name}.tar.gz"
-            sig = (tgt.stat().st_size, int(tgt.stat().st_mtime)) if tgt.exists() else None
-            if sig is None:
-                print(f"[zenodo] bundling {state.name}")
+            tgt = bdir / f"{st.name}.tar.gz"
+            if not tgt.exists():
+                print(f"[zenodo] bundling {st.name}")
                 with tarfile.open(tgt, "w:gz") as tf:
-                    tf.add(state, arcname=state.name)
+                    tf.add(st, arcname=st.name)
 
     while True:
-        uploaded = state.setdefault("files", {})
+        seen = state.setdefault("files", {})
         n = 0
-        scan_root = root
-        for key, path, sig in pending_files(scan_root, uploaded):
-            if key.startswith(".zenodo_state"):
+        for key, path, sig in pending(root, seen):
+            if key.startswith(".zenodo_record"):
                 continue
             if key.startswith("_bundles/"):
                 key = "states/" + key[len("_bundles/"):]
-            if upload_file(bucket, path, key):
-                uploaded[key] = sig
+            if upload(rec_id, key, path):
+                seen[key] = sig
                 n += 1
                 state_path.write_text(json.dumps(state, indent=2))
         print(f"[zenodo {time.strftime('%H:%M:%S')}] {n} file(s) uploaded")
         if args.publish:
-            publish(dep_id)
+            publish(rec_id)
             return 0
         if args.watch <= 0:
             return 0
