@@ -117,6 +117,14 @@ def delete_file(record_id, key):
 
 
 def upload(record_id, key, path: Path) -> bool:
+    try:
+        return _upload(record_id, key, path)
+    except Exception as exc:                     # noqa: BLE001
+        print(f"[zenodo] upload error {key}: {type(exc).__name__}: {exc}")
+        return False
+
+
+def _upload(record_id, key, path: Path) -> bool:
     key = key.replace(os.sep, "/")
     if key in list_files(record_id):
         delete_file(record_id, key)

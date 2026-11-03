@@ -57,12 +57,16 @@ def main(argv=None):
         stamp = time.strftime("%Y-%m-%d %H:%M:%S")
         if todo:
             print(f"[watch {stamp}] {len(todo)} state(s) to process", flush=True)
-            run_states(root, out, n_frames=args.frames,
-                       c2_stride=args.c2_stride,
-                       pairs=True, pair_frames=args.pair_frames,
-                       prune_traj=prune and not args.zenodo_upload_traj,
-                       require_meta=True)
-            aggregate(out)
+            try:
+                run_states(root, out, n_frames=args.frames,
+                           c2_stride=args.c2_stride,
+                           pairs=True, pair_frames=args.pair_frames,
+                           prune_traj=prune and not args.zenodo_upload_traj,
+                           require_meta=True)
+                aggregate(out)
+            except Exception as exc:             # noqa: BLE001
+                print(f"[watch] pass failed: {type(exc).__name__}: {exc}",
+                      flush=True)
         else:
             print(f"[watch {stamp}] nothing new", flush=True)
         if args.zenodo_id and args.zenodo_upload_traj and todo:
