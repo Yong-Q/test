@@ -163,11 +163,53 @@ def _hbonds(atoms, sym, acceptors):
     return hb
 
 
+
+MASS = {"C": 12.011, "H": 1.008, "N": 14.007, "O": 15.999}
+
+
+def com_timeseries(traj, n_mol, natoms_per_mol):
+    """Per-frame centre of mass of every molecule plus the COM MSD.
+
+    Returns ``com`` (nframes, n_mol, 3) and ``msd`` (nframes, 2) with
+    columns (lag_ps, MSD_A2).  Molecules are contiguous atom blocks; the COM
+    is mass weighted; positions are unwrapped through the periodic images so
+    the MSD is diffusive rather than folded back into the box.
+    """
+    import ase.io
+    com, unwrapped, box = [], [], None
+    for atoms in ase.io.iread(str(traj), format="lammps-dump-text",
+                              specorder=ELEMENTS):
+        sym = np.array(atoms.get_chemical_symbols())
+        m = np.array([MASS.get(s, 1.0) for s in sym])
+        pos = atoms.get_positions().reshape(n_mol, natoms_per_mol, 3)
+        mm = m.reshape(n_mol, natoms_per_mol)
+        c = (pos * mm[:, :, None]).sum(1) / mm.sum(1)[:, None]
+        if box is None:
+            box = np.array(atoms.cell.lengths())
+        if unwrapped:
+            d = c - com[-1]
+            d -= box * np.round(d / box)
+            c_un = unwrapped[-1] + d
+        else:
+            c_un = c.copy()
+        com.append(c)
+        unwrapped.append(c_un)
+    com = np.asarray(com, dtype=np.float32)
+    un = np.asarray(unwrapped)
+    nf = len(un)
+    lags = np.unique(np.linspace(0, nf - 1, min(nf, 40)).astype(int))
+    msd = np.array([[lag, float(((un[lag:] - un[:nf - lag]) ** 2).sum(-1).mean())]
+                    for lag in lags])
+    return com, msd
+
+
 # ----------------------------------------------------------------------------
 # per-state analysis
 # ----------------------------------------------------------------------------
 def analyze_state(traj, species, outdir, n_frames=200, rdf_frames=20,
-                  hb_frames=50, rng_seed=0, pairs=True, pair_frames=20):
+                  hb_frames=50, rng_seed=0, pairs=True, pair_frames=20,
+                  com=True, timestep_ps=0.0005, dump_every=1000,
+                  intra=True, intra_frames=200):
     """Return a dict of scalars; also writes ``analysis/profiles.npz``."""
     out = Path(outdir)
     out.mkdir(parents=True, exist_ok=True)
@@ -289,6 +331,38 @@ def analyze_state(traj, species, outdir, n_frames=200, rdf_frames=20,
         rec["anisotropy_l2_max"] = float(max(
             [np.max(v) for k, v in pc.items() if k.startswith("a2_")] or [0.0]))
 
+    if intra:
+        try:
+            from sampling.intramolecular import intramolecular_stats
+            iframes = []
+            istride = max(1, total // max(1, intra_frames))
+            for idx, atoms in enumerate(iter_frames(traj, 1)):
+                if idx % istride == 0:
+                    iframes.append(atoms)
+                if len(iframes) >= intra_frames:
+                    break
+            iv = intramolecular_stats(iframes, nat, max_frames=intra_frames)
+            np.savez(out / "intra.npz", **iv)
+            rec["intra_mean"] = {k: float(np.mean(v)) for k, v in iv.items()
+                                 if k.startswith(("bond_", "angle_",
+                                                  "dihedral_"))}
+            rec["axes_p2_mean"] = float(iv.get("p2_mean", 0.0))
+            rec["intra_frames"] = int(iv.get("nframes", 0))
+        except Exception as exc:                     # noqa: BLE001
+            rec["intra_error"] = f"{type(exc).__name__}: {exc}"
+
+    if com:
+        try:
+            com_xyz, msd = com_timeseries(traj, int(len(pos)), nat)
+            dt_ps = timestep_ps * dump_every
+            np.savez(out / "com.npz", com=com_xyz,
+                     lag_ps=msd[:, 0] * dt_ps, msd_A2=msd[:, 1])
+            rec["com_frames"] = int(len(com_xyz))
+            rec["com_nmol"] = int(com_xyz.shape[1])
+            rec["msd_file"] = "com.npz"
+        except Exception as exc:                     # noqa: BLE001
+            rec["com_error"] = f"{type(exc).__name__}: {exc}"
+
     np.savez(out / "profiles.npz", r_pair=r_pair, g_pair=g_pair,
              r_xh=r_xh, g_xh=g_xh, bonds=bonds, p2=p2, q_tet=qtet,
              orient_axis=orient_axis, orient_theta=otheta, orient_phi=ophi)
@@ -355,9 +429,19 @@ def run_states(root: Path, outdir: Path, force=False, n_frames=200,
             continue
         if verbose:
             print(f"[scan] {sid}: {traj}")
+        meta_p = state / "meta.json"
+        ts, de = 0.0005, 1000
+        if meta_p.exists():
+            try:
+                _m = json.loads(meta_p.read_text())
+                ts = float(_m.get("timestep_ps") or ts)
+                de = int(_m.get("dump_every") or de)
+            except Exception:
+                pass
         struct = analyze_state(traj, species, ana / "analysis",
                                n_frames=n_frames, pairs=pairs,
-                               pair_frames=pair_frames)
+                               pair_frames=pair_frames, com=True,
+                               timestep_ps=ts, dump_every=de)
         c1c2 = ana / "c1c2"
         try:
             c1, dens = analyze_trajectory(
