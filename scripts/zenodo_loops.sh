@@ -48,5 +48,6 @@ supervise mirror "$PY" -m sampling.zenodo_upload \
     --root "$ANA" --kind analysis --record-id "$ANA_RECORD" \
     --bundle-states --watch 1800 &
 supervise traj "$PY" -m sampling.zenodo_batch_traj \
-    --root "$SCAN_ROOT" --record-id "$TRAJ_RECORD" --batch 3 --watch 1800 &
+    --root "$SCAN_ROOT" --record-id "$TRAJ_RECORD" --batch 3 --watch 1800 \
+    --archive-dir "$SCAN_ROOT/traj_archive" &
 wait

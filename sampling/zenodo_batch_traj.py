@@ -54,6 +54,10 @@ def main(argv=None):
                     help="remove the local file once Zenodo confirmed it "
                          "(default: keep it, space is not the constraint)")
     ap.add_argument("--state", default=None)
+    ap.add_argument("--archive-dir", default=None,
+                    help="copy finished trajectories here (agent-owned) and "
+                         "drop the worker-owned original, so the worker "
+                         "identity quota stays small while a local copy remains")
     args = ap.parse_args(argv)
 
     root = Path(args.root)
@@ -70,7 +74,20 @@ def main(argv=None):
         print(f"[traj {time.strftime('%H:%M:%S')}] {len(todo)} to upload "
               f"({len(done)} done, {len(recs)} record(s), "
               f"{recs[-1]['bytes']/1e9:.1f} GB in the last)")
+        archive = Path(args.archive_dir) if args.archive_dir else None
+        if archive:
+            archive.mkdir(parents=True, exist_ok=True)
         for sid, traj in todo:
+            if archive:
+                import shutil
+                dst = archive / traj.name.replace("traj.", f"{sid}.")
+                if not dst.exists():
+                    shutil.copy2(traj, dst)
+                    print(f"[traj] archived {dst.name} "
+                          f"({dst.stat().st_size/1e6:.0f} MB)")
+                if dst.stat().st_size == traj.stat().st_size:
+                    traj.unlink()
+                traj = dst
             key = f"trajectories/{sid}.dump.gz" if traj.suffix == ".gz" \
                 else f"trajectories/{sid}.dump"
             size = traj.stat().st_size
