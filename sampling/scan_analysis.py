@@ -168,24 +168,27 @@ MASS = {"C": 12.011, "H": 1.008, "N": 14.007, "O": 15.999}
 
 
 def com_timeseries(traj, n_mol, natoms_per_mol):
-    """Per-frame centre of mass of every molecule plus the COM MSD.
+    """Per-frame mass-weighted centre of mass plus the COM mean-square displacement.
 
-    Returns ``com`` (nframes, n_mol, 3) and ``msd`` (nframes, 2) with
-    columns (lag_ps, MSD_A2).  Molecules are contiguous atom blocks; the COM
-    is mass weighted; positions are unwrapped through the periodic images so
-    the MSD is diffusive rather than folded back into the box.
+    Uses the ``mol`` column when the dump has one (so repeated elements such as
+    the two H of water or the six H of ethane are grouped correctly); otherwise
+    falls back to contiguous atom blocks.
     """
-    import ase.io
+    from sampling.dump_mol import read_dump
     com, unwrapped, box = [], [], None
-    for atoms in ase.io.iread(str(traj), format="lammps-dump-text",
-                              specorder=ELEMENTS):
-        sym = np.array(atoms.get_chemical_symbols())
-        m = np.array([MASS.get(s, 1.0) for s in sym])
-        pos = atoms.get_positions().reshape(n_mol, natoms_per_mol, 3)
-        mm = m.reshape(n_mol, natoms_per_mol)
-        c = (pos * mm[:, :, None]).sum(1) / mm.sum(1)[:, None]
+    for fr in read_dump(traj, elements=ELEMENTS):
+        sym = np.array([str(x) for x in fr["symbols"]])
+        pos = np.asarray(fr["positions"])
+        mol = fr.get("mol")
+        if mol is None:
+            mol = np.repeat(np.arange(n_mol), natoms_per_mol)
+        umol, inv = np.unique(mol, return_inverse=True)
+        m = np.array([MASS.get(x, 1.0) for x in sym])
+        wsum = np.bincount(inv, weights=m)
+        c = np.stack([np.bincount(inv, weights=m * pos[:, k]) for k in range(3)],
+                     axis=1) / wsum[:, None]
         if box is None:
-            box = np.array(atoms.cell.lengths())
+            box = np.asarray(fr["cell"], dtype=float)
         if unwrapped:
             d = c - com[-1]
             d -= box * np.round(d / box)
@@ -201,7 +204,6 @@ def com_timeseries(traj, n_mol, natoms_per_mol):
     msd = np.array([[lag, float(((un[lag:] - un[:nf - lag]) ** 2).sum(-1).mean())]
                     for lag in lags])
     return com, msd
-
 
 # ----------------------------------------------------------------------------
 # per-state analysis
@@ -317,11 +319,18 @@ def analyze_state(traj, species, outdir, n_frames=200, rdf_frames=20,
         from sampling.pair_correlations import pair_correlations
         pframes = []
         pstride = max(1, total // max(1, pair_frames))
-        for idx, atoms in enumerate(iter_frames(traj, 1)):
-            if idx % pstride == 0:
-                pframes.append(atoms)
-            if len(pframes) >= pair_frames:
-                break
+        from sampling.dump_mol import read_dump
+        try:
+            for fr in read_dump(traj, elements=ELEMENTS, stride=pstride,
+                                max_frames=pair_frames):
+                pframes.append(fr)
+        except Exception:
+            pframes = []
+            for idx, atoms in enumerate(iter_frames(traj, 1)):
+                if idx % pstride == 0:
+                    pframes.append(atoms)
+                if len(pframes) >= pair_frames:
+                    break
         pc = pair_correlations(pframes, rmax=RDF_RMAX, bins=RDF_BINS)
         np.savez(out / "pairs.npz", **{k: v for k, v in pc.items()})
         rec["pairs_file"] = "pairs.npz"

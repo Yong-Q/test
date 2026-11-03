@@ -50,4 +50,5 @@ supervise mirror "$PY" -m sampling.zenodo_upload \
 supervise traj "$PY" -m sampling.zenodo_batch_traj \
     --root "$SCAN_ROOT" --record-id "$TRAJ_RECORD" --batch 3 --watch 1800 \
     --archive-dir "$SCAN_ROOT/traj_archive" &
+supervise sync "$HERE/sync_postproc.sh" 1800 &
 wait

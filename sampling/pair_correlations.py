@@ -41,7 +41,15 @@ def _ylm(u):
 
 
 def pair_correlations(frames, rmax=8.0, bins=100, lmax=2, shell_width=0.4):
-    """Accumulate g_ab(r), anisotropy a_l(r) and first-shell cos(theta)."""
+    """Accumulate g_ab(r), anisotropy a_l(r) and first-shell cos(theta).
+
+    ``frames`` may be ``ase.Atoms`` or dicts from ``sampling.dump_mol`` (which
+    carry molecule ids).  With molecule ids the pair histogram is split into
+    intramolecular and intermolecular contributions — essential for species
+    with repeated elements (H2O has two H, C2H6 six H), where the H-H and O-H
+    intramolecular peaks otherwise dominate the fluid structure.
+    """
+    from ase import Atoms
     from ase.neighborlist import neighbor_list
 
     edges = np.linspace(0.0, rmax, bins + 1)
@@ -50,13 +58,26 @@ def pair_correlations(frames, rmax=8.0, bins=100, lmax=2, shell_width=0.4):
 
     acc = {}          # pair -> dict(hist, sh1, sh2, n, cos, rho_pair)
     nframes = 0
-    for atoms in frames:
-        sym = np.array(atoms.get_chemical_symbols())
+    for fr in frames:
+        if isinstance(fr, dict):
+            sym = np.array([str(x) for x in fr["symbols"]])
+            atoms = Atoms(symbols=sym.tolist(), positions=fr["positions"],
+                          cell=fr["cell"], pbc=True)
+            mol = fr.get("mol")
+        else:
+            atoms = fr
+            sym = np.array(atoms.get_chemical_symbols())
+            mol = None
         vol = atoms.get_volume()
         ii, jj, D = neighbor_list("ijD", atoms, rmax)
         r = np.linalg.norm(D, axis=1)
         keep = r > 1e-8
         ii, jj, D, r = ii[keep], jj[keep], D[keep], r[keep]
+        if mol is not None:
+            mol = np.asarray(mol)
+            inter = mol[ii] != mol[jj]
+        else:
+            inter = np.ones(len(ii), dtype=bool)
         u = D / r[:, None]
         Y1, Y2 = _ylm(u)
         idx = np.clip(np.digitize(r, edges) - 1, 0, bins - 1)
@@ -68,11 +89,15 @@ def pair_correlations(frames, rmax=8.0, bins=100, lmax=2, shell_width=0.4):
                     continue
                 key = (str(a), str(b))
                 d = acc.setdefault(key, {
-                    "hist": np.zeros(bins), "sh1": np.zeros((bins, 3), complex),
+                    "hist": np.zeros(bins), "hist_inter": np.zeros(bins),
+                    "sh1": np.zeros((bins, 3), complex),
                     "sh2": np.zeros((bins, 5), complex), "n": np.zeros(bins),
                     "cos": np.zeros(36), "nc": 0, "shell_r": None})
                 rm, idxm = r[m], idx[m]
                 d["hist"] += np.bincount(idxm, minlength=bins)
+                mi = m & inter
+                if mi.any():
+                    d["hist_inter"] += np.bincount(idx[mi], minlength=bins)
                 d["n"] += np.bincount(idxm, minlength=bins)
                 np.add.at(d["sh1"], idxm, Y1[m])
                 np.add.at(d["sh2"], idxm, Y2[m])
@@ -102,6 +127,8 @@ def pair_correlations(frames, rmax=8.0, bins=100, lmax=2, shell_width=0.4):
         a2 = 4.0 * np.pi / 5.0 * (
             np.abs(d["sh2"] / np.maximum(d["n"], 1)[:, None]) ** 2).sum(1)
         out[f"g_{a}{b}"] = g
+        out[f"ginter_{a}{b}"] = (d["hist_inter"] / nframes) / np.maximum(
+            rho * shell_vol, 1e-30)
         out[f"a1_{a}{b}"] = np.where(d["n"] > 0, a1, 0.0)
         out[f"a2_{a}{b}"] = np.where(d["n"] > 0, a2, 0.0)
         out[f"cos_{a}{b}"] = (d["cos"] / d["nc"]) if d["nc"] else d["cos"]
