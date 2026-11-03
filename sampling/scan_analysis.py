@@ -393,6 +393,8 @@ def discover_states(root: Path):
     root = Path(root)
     seen = set()
     for traj in sorted(root.rglob("run/traj.dump*")):
+        if "samples_old" in str(traj) or "_legacy" in str(traj):
+            continue
         state = traj.parent.parent
         sid = state.name
         if sid in seen:
@@ -415,13 +417,16 @@ def discover_states(root: Path):
 
 def run_states(root: Path, outdir: Path, force=False, n_frames=200,
                c2_stride=10, rmax=None, c2_bins=80, verbose=True,
-               pairs=True, pair_frames=20, prune_traj=False):
+               pairs=True, pair_frames=20, prune_traj=False,
+               require_meta=False):
     from sampling.les_c1c2 import analyze_trajectory
     rows = []
     for sid, species, temp, rho, state, traj in discover_states(root):
         ana = outdir / sid
         ana.mkdir(parents=True, exist_ok=True)
         rec_path = ana / "analysis.json"
+        if require_meta and not (state / "meta.json").exists():
+            continue
         if rec_path.exists() and not force:
             rows.append(json.loads(rec_path.read_text()))
             if verbose:

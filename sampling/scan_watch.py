@@ -60,7 +60,8 @@ def main(argv=None):
             run_states(root, out, n_frames=args.frames,
                        c2_stride=args.c2_stride,
                        pairs=True, pair_frames=args.pair_frames,
-                       prune_traj=prune and not args.zenodo_upload_traj)
+                       prune_traj=prune and not args.zenodo_upload_traj,
+                       require_meta=True)
             aggregate(out)
         else:
             print(f"[watch {stamp}] nothing new", flush=True)
