@@ -29,6 +29,7 @@ if [[ -z "${ZENODO_TOKEN:-}" && -f "$BZA/.secrets/zenodo_token" ]]; then
     ZENODO_TOKEN=$(cat "$BZA/.secrets/zenodo_token")
 fi
 export ZENODO_TOKEN PYTHONPATH="$REPO:${PYTHONPATH:-}"
+cd "$REPO" || exit 1          # so "python -m sampling" resolves to this repo
 mkdir -p "$LOGS"
 
 supervise() {
