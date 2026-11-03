@@ -23,10 +23,12 @@ from pathlib import Path
 from sampling.zenodo_upload import create_draft, new_version, upload
 
 
-def finished(root: Path, state_file: Path):
-    done = json.loads(state_file.read_text()) if state_file.exists() else {}
+def finished(root: Path, done: dict):
+    """Return [(sim_id, traj)] for finished states not yet uploaded."""
+    metas = list(root.glob("shard_*/attempt-*/samples/*/meta.json"))
+    metas += list(root.glob("samples/*/meta.json"))
     out = []
-    for meta in sorted(root.rglob("samples/*/meta.json")):
+    for meta in sorted(metas):
         state = meta.parent
         if "samples_old" in str(state) or "_legacy" in str(state):
             continue
@@ -38,7 +40,7 @@ def finished(root: Path, state_file: Path):
             traj = state / "run" / "traj.dump"
         if traj.exists():
             out.append((sid, traj))
-    return out, done
+    return out
 
 
 def main(argv=None):
@@ -62,18 +64,24 @@ def main(argv=None):
 
     root = Path(args.root)
     state_file = Path(args.state) if args.state else root / ".zenodo_traj.json"
+    state = json.loads(state_file.read_text()) if state_file.exists() else {}
+    done = state.setdefault("done", {})
+    recs = state.setdefault("records", [{"id": args.record_id, "bytes": 0}])
+
+    def save():
+        state_file.write_text(json.dumps(state, indent=2))
+
     while True:
         try:
-            todo, done = finished(root, state_file)
+            todo = finished(root, done)
         except Exception as exc:                 # noqa: BLE001
             print(f"[traj] scan error: {type(exc).__name__}: {exc}")
             time.sleep(max(60, args.watch))
             continue
         todo = todo[:max(1, args.batch)]
-        recs = state.setdefault("records", [{"id": args.record_id, "bytes": 0}])
         print(f"[traj {time.strftime('%H:%M:%S')}] {len(todo)} to upload "
               f"({len(done)} done, {len(recs)} record(s), "
-              f"{recs[-1]['bytes']/1e9:.1f} GB in the last)")
+              f"{recs[-1]['bytes']/1e9:.1f} GB in the last)", flush=True)
         archive = Path(args.archive_dir) if args.archive_dir else None
         if archive:
             archive.mkdir(parents=True, exist_ok=True)
@@ -84,7 +92,7 @@ def main(argv=None):
                 if not dst.exists():
                     shutil.copy2(traj, dst)
                     print(f"[traj] archived {dst.name} "
-                          f"({dst.stat().st_size/1e6:.0f} MB)")
+                          f"({dst.stat().st_size/1e6:.0f} MB)", flush=True)
                 if dst.stat().st_size == traj.stat().st_size:
                     traj.unlink()
                 traj = dst
@@ -92,7 +100,6 @@ def main(argv=None):
                 else f"trajectories/{sid}.dump"
             size = traj.stat().st_size
             if recs[-1]["bytes"] + size > args.max_bytes:
-                # versioning: publish the current record, continue in v(n+1)
                 try:
                     rec = new_version(recs[-1]["id"])
                 except Exception as exc:         # noqa: BLE001
@@ -100,18 +107,19 @@ def main(argv=None):
                     rec = create_draft("trajectories")
                 recs.append({"id": rec["id"], "bytes": 0})
                 print(f"[traj] continued in record {rec['id']} "
-                      f"(version {len(recs)})")
+                      f"(version {len(recs)})", flush=True)
             ok = upload(recs[-1]["id"], key, traj)
             if ok:
                 if args.delete_after:
                     traj.unlink()
                 recs[-1]["bytes"] += size
-                done[sid] = {"key": key, "record": recs[-1]["id"],
-                             "bytes": size}
-                state_file.write_text(json.dumps(done, indent=2))
-                print(f"[traj] uploaded {traj}" + (" and removed" if args.delete_after else ""))
+                done[sid] = {"key": key, "record": recs[-1]["id"], "bytes": size}
+                save()
+                print(f"[traj] uploaded {traj}" +
+                      (" and removed" if args.delete_after else ""), flush=True)
             else:
-                print(f"[traj] keeping {traj} (upload failed)")
+                print(f"[traj] keeping {traj} (upload failed)", flush=True)
+        save()
         if args.watch <= 0:
             return 0
         time.sleep(args.watch)
