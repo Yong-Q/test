@@ -27,7 +27,7 @@ LAMMPS_DIR=${LAMMPS_DIR:-$BZA/external-repos/lammps-stable_30Sep2026}
 BUILD_DIR=${BUILD_DIR:-$SYMMETRIX_DIR/symmetrix/build-lammps-les}
 CUDA_HOME=${CUDA_HOME:-/opt/matos-tools/cuda/12.9}
 CUDA_ARCH=${CUDA_ARCH:-80}
-JOBS=${JOBS:-$(nproc)}
+JOBS=${JOBS:-$(( $(nproc) < 16 ? $(nproc) : 16 ))}   # keep the login node usable
 CONDA_LIB=${CONDA_LIB:-/opt/matos-tools/conda/envs/matos-compute/lib}
 PATCH=${PATCH:-}
 if [[ -z "$PATCH" ]]; then
