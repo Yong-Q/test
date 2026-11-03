@@ -162,6 +162,21 @@ def publish(record_id):
     return True
 
 
+def new_version(record_id):
+    """Publish ``record_id`` (if needed) and open the next version draft."""
+    try:
+        publish(record_id)
+    except Exception as exc:                     # noqa: BLE001
+        print(f"[zenodo] publish before versioning failed: {exc}")
+    r = requests.post(f"{API}/records/{record_id}/versions",
+                      headers=_headers(), timeout=120)
+    r.raise_for_status()
+    rec = r.json()
+    print(f"[zenodo] new version draft {rec['id']} "
+          f"(concept {rec.get('conceptrecid') or rec.get('concept', '')})")
+    return rec
+
+
 def pending(root: Path, seen: dict):
     for p in sorted(root.rglob("*")):
         if not p.is_file():

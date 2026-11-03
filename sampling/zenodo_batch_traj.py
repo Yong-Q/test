@@ -20,7 +20,7 @@ import os
 import time
 from pathlib import Path
 
-from sampling.zenodo_upload import create_draft, upload
+from sampling.zenodo_upload import create_draft, new_version, upload
 
 
 def finished(root: Path, state_file: Path):
@@ -92,9 +92,15 @@ def main(argv=None):
                 else f"trajectories/{sid}.dump"
             size = traj.stat().st_size
             if recs[-1]["bytes"] + size > args.max_bytes:
-                rec = create_draft("trajectories")
+                # versioning: publish the current record, continue in v(n+1)
+                try:
+                    rec = new_version(recs[-1]["id"])
+                except Exception as exc:         # noqa: BLE001
+                    print(f"[traj] versioning failed ({exc}); new record")
+                    rec = create_draft("trajectories")
                 recs.append({"id": rec["id"], "bytes": 0})
-                print(f"[traj] rolled over to record {rec['id']}")
+                print(f"[traj] continued in record {rec['id']} "
+                      f"(version {len(recs)})")
             ok = upload(recs[-1]["id"], key, traj)
             if ok:
                 if args.delete_after:
