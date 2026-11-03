@@ -47,6 +47,9 @@ def main(argv=None):
     ap.add_argument("--record-id", required=True)
     ap.add_argument("--batch", type=int, default=3)
     ap.add_argument("--watch", type=float, default=0)
+    ap.add_argument("--delete-after", action="store_true",
+                    help="remove the local file once Zenodo confirmed it "
+                         "(default: keep it, space is not the constraint)")
     ap.add_argument("--state", default=None)
     args = ap.parse_args(argv)
 
@@ -67,10 +70,11 @@ def main(argv=None):
                 else f"trajectories/{sid}.dump"
             ok = upload(args.record_id, key, traj)
             if ok:
-                traj.unlink()
+                if args.delete_after:
+                    traj.unlink()
                 done[sid] = {"key": key, "bytes": None}
                 state_file.write_text(json.dumps(done, indent=2))
-                print(f"[traj] uploaded and removed {traj}")
+                print(f"[traj] uploaded {traj}" + (" and removed" if args.delete_after else ""))
             else:
                 print(f"[traj] keeping {traj} (upload failed)")
         if args.watch <= 0:
