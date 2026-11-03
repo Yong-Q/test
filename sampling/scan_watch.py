@@ -42,6 +42,9 @@ def main(argv=None):
     ap.add_argument("--frames", type=int, default=200)
     ap.add_argument("--c2-stride", type=int, default=10)
     ap.add_argument("--pair-frames", type=int, default=20)
+    ap.add_argument("--zenodo-id", help="Zenodo deposition id for trajectories")
+    ap.add_argument("--zenodo-upload-traj", action="store_true",
+                    help="upload each trajectory to Zenodo, then delete it")
     args = ap.parse_args(argv)
 
     root = Path(args.root)
@@ -57,10 +60,29 @@ def main(argv=None):
             run_states(root, out, n_frames=args.frames,
                        c2_stride=args.c2_stride,
                        pairs=True, pair_frames=args.pair_frames,
-                       prune_traj=prune)
+                       prune_traj=prune and not args.zenodo_upload_traj)
             aggregate(out)
         else:
             print(f"[watch {stamp}] nothing new", flush=True)
+        if args.zenodo_id and args.zenodo_upload_traj and todo:
+            import os
+            import subprocess
+            import sys
+            for sid, state, traj in todo:
+                tr = Path(traj)
+                if not tr.exists():
+                    continue
+                key = f"trajectories/{sid}.dump.gz" if tr.suffix == ".gz" \
+                    else f"trajectories/{sid}.dump"
+                env = dict(os.environ)
+                env.setdefault("PYTHONPATH", str(Path(__file__).resolve().parents[1]))
+                rc = subprocess.run(
+                    [sys.executable, "-m", "sampling.zenodo_upload",
+                     "--root", str(state), "--deposition-id", args.zenodo_id,
+                     "--single-file", str(tr), "--key", key, "--delete-after"],
+                    env=env)
+                print(f"[watch] zenodo upload {key}: rc={rc.returncode}",
+                      flush=True)
         if args.once:
             return 0
         time.sleep(args.interval)
