@@ -37,12 +37,23 @@ jobs:
           sha256sum -c MANIFEST.sha256
           echo "--- BUILD_INFO ---"; cat BUILD_INFO.txt
           test -x bin/lmp && test -x bin/lmp-run && test -f env.sh
-          file bin/lmp | grep -q ELF
-          # The runner has no GPU/toolkit, so cublas/cuda may be unresolved;
-          # anything else missing means the bundle is broken.
+          head -c 4 bin/lmp | grep -q ELF
+
+          # Load the bundle's own libraries first, exactly as a user would.
+          . ./env.sh
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+          ldd bin/lmp | sed -n '1,40p'
+
+          # A hosted runner has no GPU or CUDA toolkit, so libcublas/libcuda
+          # stay unresolved.  Everything else must come from lib/.
           missing=$(ldd bin/lmp | awk '/not found/{print $1}' \
                     | grep -Ev '^lib(cublas|cublasLt|cuda)\.so' || true)
-          [ -z "$missing" ] || { echo "unexpected missing libs: $missing"; exit 1; }
+          if [ -n "$missing" ]; then
+            echo "::error::unexpected missing libraries: $missing"
+            exit 1
+          fi
+          echo "bundle self-check OK"
+
 
       - uses: actions/upload-artifact@v4
         with:
