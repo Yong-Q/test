@@ -20,7 +20,8 @@ import time
 from pathlib import Path
 
 STEP_RE = re.compile(r"^\s+(\d+)\s+([\d.]+)\s+(-?[\d.]+)\s*$", re.M)
-TOTAL_STEPS = 2_200_000
+EQUIL_STEPS = 200_000
+PROD_STEPS = 2_000_000
 
 
 def shard_state(shard: Path):
@@ -36,8 +37,13 @@ def shard_state(shard: Path):
         return None
     step, temp, pe = int(m[-1][0]), float(m[-1][1]), float(m[-1][2])
     meta = run.parent / "meta.json"
+    traj = run / "traj.dump"
+    producing = traj.exists() and traj.stat().st_size > 0
+    total = PROD_STEPS if producing else EQUIL_STEPS
     return {"sim": run.parent.name, "step": step, "temp": temp, "pe": pe,
-            "done": meta.exists(), "mtime": out.stat().st_mtime}
+            "phase": "prod" if producing else "equil", "total": total,
+            "done": meta.exists(), "mtime": out.stat().st_mtime,
+            "traj_mb": (traj.stat().st_size / 1e6) if producing else 0.0}
 
 
 def loops_alive():
@@ -57,13 +63,14 @@ def report(root: Path) -> str:
         st = shard_state(shard)
         if not st:
             continue
-        frac = 100.0 * st["step"] / TOTAL_STEPS
+        frac = 100.0 * st["step"] / st["total"]
         rate = ""
         age = max(1.0, time.time() - st["mtime"])
-        lines.append(f"  {shard.name}: {st['sim'][:32]:32s} "
-                     f"{st['step']:>9,}/{TOTAL_STEPS:,} "
+        lines.append(f"  {shard.name}: {st['sim'][:30]:30s} "
+                     f"[{st['phase']:5s}] {st['step']:>8,}/{st['total']:,} "
                      f"({frac:5.1f}%)  T={st['temp']:7.1f} K  "
-                     f"PE={st['pe']:.0f}  {'DONE' if st['done'] else ''}")
+                     f"traj={st['traj_mb']:6.1f} MB  "
+                     f"{'DONE' if st['done'] else ''}")
     done = len(list(root.glob("shard_*/attempt-*/samples/*/meta.json")))
     traj = list(root.glob("shard_*/attempt-*/samples/*/run/traj.dump*"))
     traj += list(root.glob("traj_archive/*"))

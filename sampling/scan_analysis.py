@@ -46,12 +46,13 @@ RDF_BINS = 100
 # frame access
 # ----------------------------------------------------------------------------
 def iter_frames(path, stride=1):
-    import ase.io
-    for i, atoms in enumerate(ase.io.iread(str(path),
-                                           format="lammps-dump-text",
-                                           specorder=ELEMENTS)):
-        if i % stride == 0:
-            yield atoms
+    # numpy reader: ASE re-scans the gzip stream per frame and is unusably
+    # slow on the multi-hundred-MB production dumps.
+    from ase import Atoms
+    from sampling.dump_mol import read_dump
+    for f in read_dump(path, elements=ELEMENTS, stride=max(1, stride)):
+        yield Atoms(symbols=f["symbols"], positions=f["positions"],
+                    cell=f["cell"], pbc=True)
 
 
 def n_frames_of(state: Path, traj: Path) -> int:
@@ -398,13 +399,30 @@ def _parse_sim_id(sid):
 
 
 def discover_states(root: Path):
-    """Yield (sim_id, species, temperature, density, state_dir, traj)."""
+    """Yield (sim_id, species, temperature, density, state_dir, traj).
+
+    A finished state keeps its dump in ``run/`` only until the archive loop
+    moves it to ``traj_archive/<sim_id>.dump.gz`` and drops the worker copy;
+    look in both places so analysis does not depend on that race.
+    """
     root = Path(root)
-    seen = set()
+    archive = root / "traj_archive"
+    entries = []
     for traj in sorted(root.rglob("run/traj.dump*")):
         if "samples_old" in str(traj) or "_legacy" in str(traj):
             continue
-        state = traj.parent.parent
+        entries.append((traj.parent.parent, traj))
+    if archive.is_dir():
+        for f in sorted(archive.glob("*.dump.gz")):
+            sid_arch = f.name[:-len(".dump.gz")]
+            cands = [p for p in root.glob(f"shard_*/attempt-*/samples/{sid_arch}")
+                     if p.is_dir() and "samples_old" not in str(p)]
+            if not cands:
+                cands = [p for p in root.glob(f"samples/{sid_arch}") if p.is_dir()]
+            if cands:
+                entries.append((sorted(cands)[-1], f))
+    seen = set()
+    for state, traj in entries:
         sid = state.name
         if sid in seen:
             continue

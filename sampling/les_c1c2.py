@@ -412,8 +412,11 @@ def analyze_trajectory(traj, outdir, species, elements, temperature,
     _check_composition(elements, species, pair)
     if density is None:
         if fmt == "lammps-dump-text":
-            first = next(ase.io.iread(str(traj), format=fmt,
-                                      specorder=list(elements)))
+            from ase import Atoms
+            from sampling.dump_mol import read_dump
+            f = next(iter(read_dump(traj, elements=elements, max_frames=1)))
+            first = Atoms(symbols=f["symbols"], positions=f["positions"],
+                          cell=f["cell"], pbc=True)
         else:
             first = next(ase.io.iread(str(traj), format=fmt))
         density = len(first) / (atoms_per_molecule(species)

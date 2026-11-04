@@ -67,10 +67,16 @@ def vext_of_x(x, field: dict) -> np.ndarray:
 
 def read_traj(path: Path, elements, stride: int = 1, fmt: str = "lammps-dump-text"):
     import ase.io
+    from ase import Atoms
     if fmt == "lammps-dump-text":
-        it = ase.io.iread(path, format=fmt, specorder=list(elements))
-    else:
-        it = ase.io.iread(path, format=fmt)
+        # ASE's dump reader re-scans the whole gzip stream per frame and is
+        # orders of magnitude slower than the numpy reader for our dumps.
+        from sampling.dump_mol import read_dump
+        return [Atoms(symbols=f["symbols"], positions=f["positions"],
+                      cell=f["cell"], pbc=True)
+                for f in read_dump(path, elements=list(elements),
+                                   stride=max(1, stride))]
+    it = ase.io.iread(path, format=fmt)
     return [a for i, a in enumerate(it) if i % stride == 0]
 
 
