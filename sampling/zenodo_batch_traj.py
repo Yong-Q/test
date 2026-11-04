@@ -23,8 +23,12 @@ from pathlib import Path
 from sampling.zenodo_upload import create_draft, new_version, upload
 
 
-def finished(root: Path, done: dict):
-    """Return [(sim_id, traj)] for finished states not yet uploaded."""
+def finished(root: Path, done: dict, archive_dir=None):
+    """Return [(sim_id, traj)] for finished states not yet uploaded.
+
+    The archive step drops the worker copy as soon as the archived copy is
+    complete, so a failed upload must be retried from ``archive_dir``.
+    """
     metas = list(root.glob("shard_*/attempt-*/samples/*/meta.json"))
     metas += list(root.glob("samples/*/meta.json"))
     out = []
@@ -38,6 +42,10 @@ def finished(root: Path, done: dict):
         traj = state / "run" / "traj.dump.gz"
         if not traj.exists():
             traj = state / "run" / "traj.dump"
+        if not traj.exists() and archive_dir:
+            cand = Path(archive_dir) / f"{sid}.dump.gz"
+            if cand.exists():
+                traj = cand
         if traj.exists():
             out.append((sid, traj))
     return out
@@ -73,7 +81,7 @@ def main(argv=None):
 
     while True:
         try:
-            todo = finished(root, done)
+            todo = finished(root, done, args.archive_dir)
         except Exception as exc:                 # noqa: BLE001
             print(f"[traj] scan error: {type(exc).__name__}: {exc}")
             time.sleep(max(60, args.watch))
@@ -86,9 +94,13 @@ def main(argv=None):
         if archive:
             archive.mkdir(parents=True, exist_ok=True)
         for sid, traj in todo:
-            if archive:
+            traj = Path(traj)
+            # Never treat an already-archived file as a new source: doing so
+            # would unlink the only copy (dst == traj).
+            if archive and traj.parent.resolve() != archive.resolve():
                 import shutil
-                dst = archive / traj.name.replace("traj.", f"{sid}.")
+                suffix = ".dump.gz" if traj.name.endswith(".dump.gz") else ".dump"
+                dst = archive / f"{sid}{suffix}"
                 if not dst.exists():
                     shutil.copy2(traj, dst)
                     print(f"[traj] archived {dst.name} "

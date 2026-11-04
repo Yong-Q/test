@@ -116,12 +116,17 @@ def delete_file(record_id, key):
                     headers=_headers(), timeout=60)
 
 
-def upload(record_id, key, path: Path) -> bool:
-    try:
-        return _upload(record_id, key, path)
-    except Exception as exc:                     # noqa: BLE001
-        print(f"[zenodo] upload error {key}: {type(exc).__name__}: {exc}")
-        return False
+def upload(record_id, key, path: Path, attempts: int = 3) -> bool:
+    """Upload one file, retrying transient network errors with backoff."""
+    for attempt in range(1, attempts + 1):
+        try:
+            return _upload(record_id, key, path)
+        except Exception as exc:                 # noqa: BLE001
+            print(f"[zenodo] upload error {key} (try {attempt}/{attempts}): "
+                  f"{type(exc).__name__}: {exc}", flush=True)
+            if attempt < attempts:
+                time.sleep(15 * attempt)
+    return False
 
 
 def _upload(record_id, key, path: Path) -> bool:
@@ -182,7 +187,10 @@ def pending(root: Path, seen: dict):
         if not p.is_file():
             continue
         key = str(p.relative_to(root))
-        sig = (p.stat().st_size, int(p.stat().st_mtime))
+        size = p.stat().st_size
+        if size == 0:            # Zenodo rejects empty files at commit
+            continue
+        sig = (size, int(p.stat().st_mtime))
         if seen.get(key) != sig:
             yield key, p, sig
 
@@ -231,20 +239,39 @@ def main(argv=None):
         state["record_id"] = rec_id
         state_path.write_text(json.dumps(state, indent=2))
 
-    if args.bundle_states:
+    def refresh_bundles():
+        """Bundle each analysed state, rebuilding when the state changed.
+
+        Called every cycle: states finish while this watcher is alive, so a
+        one-shot bundle pass would leave a stale empty archive for any state
+        analysed after startup.
+        """
         import tarfile
         bdir = root / "_bundles"
         bdir.mkdir(exist_ok=True)
         for st in sorted(p for p in root.iterdir() if p.is_dir()):
             if st.name.startswith("_"):
                 continue
+            # Only archive states whose post-processing is complete.
+            if not (st / "analysis.json").exists():
+                continue
             tgt = bdir / f"{st.name}.tar.gz"
-            if not tgt.exists():
-                print(f"[zenodo] bundling {st.name}")
-                with tarfile.open(tgt, "w:gz") as tf:
-                    tf.add(st, arcname=st.name)
+            newest = max((f.stat().st_mtime for f in st.rglob("*")
+                          if f.is_file()), default=0.0)
+            if tgt.exists() and tgt.stat().st_mtime >= newest:
+                continue
+            print(f"[zenodo] bundling {st.name}", flush=True)
+            tmp = Path(str(tgt) + ".tmp")
+            with tarfile.open(tmp, "w:gz") as tf:
+                tf.add(st, arcname=st.name)
+            os.replace(tmp, tgt)
+
+    if args.bundle_states:
+        refresh_bundles()
 
     while True:
+        if args.bundle_states:
+            refresh_bundles()
         seen = state.setdefault("files", {})
         n = 0
         for key, path, sig in pending(root, seen):
