@@ -315,7 +315,17 @@ def main(argv=None):
             if key.startswith(".zenodo_record"):
                 continue
             if key.startswith("_bundles/"):
-                key = "states/" + key[len("_bundles/"):]
+                rkey = "states/" + key[len("_bundles/"):]
+                # Last-line guard: never delete/re-upload a bundle whose
+                # completed remote copy already has the same size.
+                try:
+                    rsize = list_files(rec_id).get(rkey)
+                except Exception:               # noqa: BLE001
+                    rsize = None
+                if rsize is not None and rsize == path.stat().st_size:
+                    seen[rkey] = sig
+                    continue
+                key = rkey
             if upload(rec_id, key, path):
                 seen[key] = sig
                 n += 1
