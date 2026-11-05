@@ -24,6 +24,25 @@ while true; do
     for f in $FILES; do cp "$SRC/$f.py" "$WORK/sampling/" 2>/dev/null; done
     cp "$REPO/scripts/zenodo_loops.sh" "$WORK/scripts/" 2>/dev/null
     cp "$REPO/requirements.txt" "$WORK/" 2>/dev/null
+
+    # Lightweight post-processing results -> GitHub double backup.
+    SCAN_ANA=${SCAN_ANA:-/workspace/group/shared/bza/symmetrix-polar/bench/maceles_density_scan/analysis_scan}
+    if [[ -d "$SCAN_ANA" ]]; then
+        RDIR="$WORK/results/maceles_density_scan"
+        mkdir -p "$RDIR/figures" "$RDIR/states"
+        cp "$SCAN_ANA/scan_summary.csv" "$RDIR/" 2>/dev/null
+        cp "$SCAN_ANA"/c2_*.npz "$RDIR/" 2>/dev/null
+        cp "$SCAN_ANA"/figures/*.png "$RDIR/figures/" 2>/dev/null
+        mkdir -p "$RDIR/state_bundles"
+        cp "$SCAN_ANA"/_bundles/*.tar.gz "$RDIR/state_bundles/" 2>/dev/null
+        for d in "$SCAN_ANA"/*/; do
+            sid=$(basename "$d")
+            [[ "$sid" == _* || "$sid" == figures ]] && continue
+            [[ -f "$d/analysis.json" ]] || continue
+            mkdir -p "$RDIR/states/$sid"
+            cp "$d/analysis.json" "$RDIR/states/$sid/" 2>/dev/null
+        done
+    fi
     cd "$WORK" || exit 1
     if [[ -n "$(git status --porcelain)" ]]; then
         git add -A
