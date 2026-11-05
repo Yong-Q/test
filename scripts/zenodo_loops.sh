@@ -50,9 +50,10 @@ supervise watch "$PY" -m sampling.scan_watch \
     --root "$SCAN_ROOT" --out "$ANA" --interval "$SCAN_INTERVAL" --keep-traj &
 supervise mirror "$PY" -m sampling.zenodo_upload \
     --root "$ANA" --kind analysis --record-id "$ANA_RECORD" \
-    --bundle-states --watch "$WATCH" &
+    --bundle-states --no-bundles --watch "$WATCH" &
 supervise traj "$PY" -m sampling.zenodo_batch_traj \
     --root "$SCAN_ROOT" --record-id "$TRAJ_RECORD" --batch 3 --watch "$WATCH" \
     --archive-dir "$SCAN_ROOT/traj_archive" &
+supervise bundles "$HERE/upload_bundles.sh" &
 supervise sync "$HERE/sync_postproc.sh" "$SYNC_INTERVAL" &
 wait

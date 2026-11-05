@@ -215,6 +215,8 @@ def main(argv=None):
     ap.add_argument("--watch", type=float, default=0,
                     help="seconds between scans (0 = one pass)")
     ap.add_argument("--publish", action="store_true")
+    ap.add_argument("--no-bundles", action="store_true",
+                    help="create state bundles but do not upload them")
     ap.add_argument("--bundle-states", action="store_true",
                     help="tar each <root>/<state>/ into _bundles/<state>.tar.gz")
     ap.add_argument("--single-file", help="upload one file (with --key)")
@@ -313,6 +315,8 @@ def main(argv=None):
         n = 0
         for key, path, sig in pending(root, seen, skip_state_files=args.bundle_states):
             if key.startswith(".zenodo_record"):
+                continue
+            if args.no_bundles and key.startswith("_bundles/"):
                 continue
             if key.startswith("_bundles/"):
                 rkey = "states/" + key[len("_bundles/"):]
