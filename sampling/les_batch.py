@@ -154,7 +154,13 @@ def run_row(row: dict, args, outroot: Path) -> dict:
         if args.resume and md_done and getattr(args, "no_analyze", False):
             print(f"[batch] skip {sim_id} (MD complete, no-analyze mode)")
             return {"sim_id": sim_id, "status": "skipped"}
-        if args.resume:
+        restart_present = False
+        if (root / "run").exists():
+            restart_present = bool(list((root / "run").glob("prod_*.restart"))) or \
+                              bool(list((root / "run").glob("equil_*.restart")))
+        if args.resume and restart_present:
+            print(f"[batch] resuming {sim_id} from restart")
+        elif args.resume:
             import time as _time
             keep = root.with_name(root.name + f".partial.{int(_time.time())}")
             root.rename(keep)
@@ -190,7 +196,8 @@ def run_row(row: dict, args, outroot: Path) -> dict:
             equil_steps=args.equil_steps, seed=seed,
             model=args.model, cubin=args.cubin, lmp=args.lmp,
             density=density, gpus=args.gpus, omp_threads=args.omp_threads,
-            ld_library_path=args.ld_library_path)
+            ld_library_path=args.ld_library_path,
+            restart_every=args.restart_every)
         traj = md["dump"]
         density = md["density_mol_A3"]
         meta.update({
@@ -226,6 +233,12 @@ def run_row(row: dict, args, outroot: Path) -> dict:
             meta["status"] = "md_complete"
             (root / "meta.json").write_text(
                 json.dumps(meta, indent=2, default=str))
+            # The state is complete; restart checkpoints are transient.
+            for _rf in (root / "run").glob("*.restart"):
+                try:
+                    _rf.unlink()
+                except OSError:
+                    pass
             record = {
                 "sim_id": sim_id, "species": species,
                 "temperature": temperature, "density": density,
@@ -343,6 +356,8 @@ def main(argv=None) -> int:
     ap.add_argument("--seed", type=int, default=12345,
                     help="velocity seed for rows without a seed")
     ap.add_argument("--dump-every", type=int, default=1000)
+    ap.add_argument("--restart-every", type=int, default=50000,
+                    help="production restart checkpoint interval (steps)")
     ap.add_argument("--temperature", type=float, default=300.0)
     ap.add_argument("--timestep", type=float, default=0.0005)
     ap.add_argument("--elements", nargs="+", default=["C", "H", "N", "O"])

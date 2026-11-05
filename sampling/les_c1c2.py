@@ -200,10 +200,27 @@ def _check_composition(elements, species, pair=None) -> None:
             raise ValueError(f"--c2-pair {pair} contains {bad}, not in --elements {elements}")
 
 
+def _chunk_runs(total, chunk, prefix, start=0):
+    """LAMMPS run chunks with step-tagged restart checkpoints."""
+    lines = []
+    done = start
+    while done < total:
+        n = min(chunk, total - done)
+        lines.append(f"run {n}")
+        done += n
+        lines.append(f"write_restart {prefix}_{done}.restart")
+    return "\n".join(lines)
+
+
 def write_lammps_input(workdir, data, model, cubin, elements, temperature,
                        timestep, steps, dump_every, equil_steps=0,
-                       seed=12345) -> Path:
-    """Write the LES NVT input file and return its path."""
+                       seed=12345, restart_every=50000) -> Path:
+    """Write the LES NVT input file and return its path.
+
+    Equilibration and production are split into chunks with step-tagged
+    ``write_restart`` checkpoints, so an interrupted job can be resumed from
+    the latest restart file.
+    """
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
     t_start = min(300.0, float(temperature))
@@ -213,16 +230,17 @@ def write_lammps_input(workdir, data, model, cubin, elements, temperature,
         # heat-up avoids dumping the full target kinetic energy into a
         # structure that has just been rescaled.
         heat_steps = max(1, int(0.2 * equil_steps))
-        equil_block = (
-            f"fix 1 all nvt temp {t_start:g} {temperature:g} 0.1\n"
-            f"run {heat_steps}\n"
-            f"unfix 1\n"
-            f"fix 1 all nvt temp {temperature:g} {temperature:g} 0.1\n"
-            f"run {equil_steps - heat_steps}\n"
-            f"reset_timestep 0\n"
-        )
+        eq = [f"fix 1 all nvt temp {t_start:g} {temperature:g} 0.1",
+              f"run {heat_steps}",
+              f"write_restart equil_{heat_steps}.restart",
+              "unfix 1",
+              f"fix 1 all nvt temp {temperature:g} {temperature:g} 0.1"]
+        eq.append(_chunk_runs(equil_steps, 10000, "equil", start=heat_steps))
+        eq.append("reset_timestep 0")
+        equil_block = "\n".join(eq)
     else:
-        equil_block = f"fix 1 all nvt temp {temperature:g} {temperature:g} 0.1\n"
+        equil_block = f"fix 1 all nvt temp {temperature:g} {temperature:g} 0.1"
+    prod_block = _chunk_runs(steps, max(1, int(restart_every)), "prod", start=0)
     text = f"""units metal
 atom_style molecular/kk
 atom_modify map yes
@@ -239,13 +257,49 @@ velocity all create {t_start:g} {seed} mom yes rot no dist gaussian
 thermo {dump_every}
 thermo_style custom step temp pe
 run_style verlet/kk
-{equil_block}dump 1 all custom {dump_every} traj.dump id mol type x y z fx fy fz
+{equil_block}
+dump 1 all custom {dump_every} traj.dump id mol type x y z fx fy fz
 dump_modify 1 sort id
-run {steps}
+{prod_block}
 """
     path = workdir / "in.les_md"
     path.write_text(text)
     return path
+
+
+def write_lammps_restart_input(workdir, restart, temperature, timestep,
+                               steps, dump_every, equil_steps, phase,
+                               start_step, restart_every=50000) -> Path:
+    """Write a continuation input that reads a step-tagged restart file."""
+    workdir = Path(workdir)
+    lines = [f"""units metal
+atom_style molecular/kk
+atom_modify map yes
+boundary p p p
+package kokkos neigh half newton on
+newton on
+read_restart {Path(restart).name}
+neighbor 2.0 bin
+neigh_modify every 10 delay 0 check yes
+timestep {timestep:g}
+thermo {dump_every}
+thermo_style custom step temp pe
+run_style verlet/kk"""]
+    if phase == "equil":
+        lines.append(_chunk_runs(equil_steps, 10000, "equil",
+                                 start=start_step))
+        lines.append("reset_timestep 0")
+        prod_start = 0
+    else:
+        prod_start = start_step
+    lines.append(f"dump 1 all custom {dump_every} traj.dump id mol type x y z fx fy fz")
+    lines.append("dump_modify 1 sort id append yes")
+    lines.append(_chunk_runs(steps, max(1, int(restart_every)), "prod",
+                             start=prod_start))
+    path = workdir / "in.les_md"
+    path.write_text("\n".join(lines) + "\n")
+    return path
+
 
 
 def run_engine(lmp, workdir, input_path, log_path, gpus=1, omp_threads=1,
@@ -324,7 +378,8 @@ def run_md(data, species, elements, temperature, timestep, steps, dump_every,
            workdir, equil_steps=200000, seed=12345,
            model=DEFAULT_MODEL, cubin=DEFAULT_CUBIN,
            lmp=DEFAULT_LMP, density=None, gpus=1, omp_threads=1,
-           ld_library_path=DEFAULT_LD_LIBRARY_PATH) -> dict:
+           ld_library_path=DEFAULT_LD_LIBRARY_PATH,
+           restart_every=50000) -> dict:
     """Write input, run LES-MD, and return run metadata plus the dump path."""
     data = Path(data)
     workdir = Path(workdir)
@@ -343,14 +398,45 @@ def run_md(data, species, elements, temperature, timestep, steps, dump_every,
     if density is None:
         density = info["n_atoms"] / (n_per_mol * info["volume_A3"])
     workdir.mkdir(parents=True, exist_ok=True)
-    input_path = write_lammps_input(
-        workdir, data, model, cubin, elements, temperature, timestep,
-        steps, dump_every, equil_steps=equil_steps, seed=seed)
+    # Resume from the latest step-tagged restart if one exists.
+    def _latest(pattern):
+        out = []
+        for p in workdir.glob(pattern):
+            m = re.search(r"_(\d+)\.restart$", p.name)
+            if m:
+                out.append((int(m.group(1)), p))
+        out.sort()
+        return out[-1] if out else None
+    prod_restart = _latest("prod_*.restart")
+    equil_restart = _latest("equil_*.restart")
+    restart = None
+    phase = None
+    start_step = 0
+    if prod_restart:
+        start_step, restart = prod_restart
+        phase = "prod"
+    elif equil_restart:
+        start_step, restart = equil_restart
+        phase = "equil"
     log_path = workdir / "log.les_md"
-    invocation = run_engine(lmp, workdir, input_path, log_path, gpus=gpus,
-                            omp_threads=omp_threads,
-                            ld_library_path=ld_library_path)
-    parsed = parse_log_timing(log_path, steps=steps)
+    if restart and phase == "prod" and start_step >= steps:
+        invocation = {}
+        parsed = parse_log_timing(log_path, steps=None)
+    else:
+        if restart:
+            input_path = write_lammps_restart_input(
+                workdir, restart, temperature, timestep, steps, dump_every,
+                equil_steps, phase, start_step,
+                restart_every=restart_every)
+        else:
+            input_path = write_lammps_input(
+                workdir, data, model, cubin, elements, temperature, timestep,
+                steps, dump_every, equil_steps=equil_steps, seed=seed,
+                restart_every=restart_every)
+        invocation = run_engine(lmp, workdir, input_path, log_path, gpus=gpus,
+                                omp_threads=omp_threads,
+                                ld_library_path=ld_library_path)
+        parsed = parse_log_timing(log_path, steps=None)
     dump = workdir / "traj.dump"
     if not dump.exists() or dump.stat().st_size == 0:
         raise RuntimeError(f"LAMMPS finished but wrote no dump at {dump}")
@@ -390,6 +476,8 @@ def run_md(data, species, elements, temperature, timestep, steps, dump_every,
             "cubin_sha256": sha256(cubin),
         },
         "invocation": invocation,
+        "resumed": bool(restart),
+        "resume_from_step": int(start_step) if restart else 0,
         "timing": timing,
         "lammps_performance": parsed["performance"],
         "lammps_total_wall_time_s": parsed["total_wall_time_s"],

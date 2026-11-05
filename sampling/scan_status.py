@@ -37,12 +37,20 @@ def shard_state(shard: Path):
         return None
     step, temp, pe = int(m[-1][0]), float(m[-1][1]), float(m[-1][2])
     meta = run.parent / "meta.json"
+    skipped = False
+    if meta.exists():
+        try:
+            import json as _json
+            skipped = _json.loads(meta.read_text()).get("status") == "skipped_not_run"
+        except Exception:
+            skipped = False
     traj = run / "traj.dump"
     producing = traj.exists() and traj.stat().st_size > 0
     total = PROD_STEPS if producing else EQUIL_STEPS
     return {"sim": run.parent.name, "step": step, "temp": temp, "pe": pe,
             "phase": "prod" if producing else "equil", "total": total,
-            "done": meta.exists(), "mtime": out.stat().st_mtime,
+            "done": meta.exists() and not skipped, "skipped": skipped,
+            "mtime": out.stat().st_mtime,
             "traj_mb": (traj.stat().st_size / 1e6) if producing else 0.0}
 
 
@@ -71,7 +79,15 @@ def report(root: Path) -> str:
                      f"({frac:5.1f}%)  T={st['temp']:7.1f} K  "
                      f"traj={st['traj_mb']:6.1f} MB  "
                      f"{'DONE' if st['done'] else ''}")
-    done = len(list(root.glob("shard_*/attempt-*/samples/*/meta.json")))
+    done = 0
+    for _m in root.glob("shard_*/attempt-*/samples/*/meta.json"):
+        try:
+            import json as _json2
+            if _json2.loads(_m.read_text()).get("status") == "skipped_not_run":
+                continue
+        except Exception:
+            pass
+        done += 1
     traj = list(root.glob("shard_*/attempt-*/samples/*/run/traj.dump*"))
     traj += list(root.glob("traj_archive/*"))
     size = sum(p.stat().st_size for p in traj if p.is_file())
