@@ -277,12 +277,38 @@ def main(argv=None):
                 tf.add(st, arcname=st.name)
             os.replace(tmp, tgt)
 
+    def reconcile_bundle_seen():
+        """Trust the remote for completed bundles; retry missing/pending ones.
+
+        The local `seen` map can go stale (for example after a failed
+        delete-then-upload). Compare each local state tar with the remote
+        draft: matching size -> skip; missing or pending -> re-upload.
+        """
+        bdir = root / "_bundles"
+        if not bdir.is_dir():
+            return
+        try:
+            remote = list_files(rec_id)
+        except Exception:                       # noqa: BLE001
+            return
+        seen = state.setdefault("files", {})
+        for b in bdir.glob("*.tar.gz"):
+            key = f"states/{b.name}"
+            sig = (b.stat().st_size, int(b.stat().st_mtime))
+            rsize = remote.get(key)
+            if rsize is not None and rsize == b.stat().st_size:
+                seen[key] = sig
+            else:
+                seen.pop(key, None)
+
     if args.bundle_states:
         refresh_bundles()
+        reconcile_bundle_seen()
 
     while True:
         if args.bundle_states:
             refresh_bundles()
+            reconcile_bundle_seen()
         seen = state.setdefault("files", {})
         n = 0
         for key, path, sig in pending(root, seen, skip_state_files=args.bundle_states):
