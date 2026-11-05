@@ -24,6 +24,8 @@ ANA=${SCAN_ROOT}/analysis_scan
 ANA_RECORD=${ANA_RECORD:-23901520}
 TRAJ_RECORD=${TRAJ_RECORD:-23901522}
 LOGS=${LOGS:-$ANA}
+WATCH=${WATCH:-300}
+SYNC_INTERVAL=${SYNC_INTERVAL:-300}
 
 if [[ -z "${ZENODO_TOKEN:-}" && -f "$BZA/.secrets/zenodo_token" ]]; then
     ZENODO_TOKEN=$(cat "$BZA/.secrets/zenodo_token")
@@ -47,9 +49,9 @@ supervise watch "$PY" -m sampling.scan_watch \
     --root "$SCAN_ROOT" --out "$ANA" --interval 900 --keep-traj &
 supervise mirror "$PY" -m sampling.zenodo_upload \
     --root "$ANA" --kind analysis --record-id "$ANA_RECORD" \
-    --bundle-states --watch 1800 &
+    --bundle-states --watch "$WATCH" &
 supervise traj "$PY" -m sampling.zenodo_batch_traj \
-    --root "$SCAN_ROOT" --record-id "$TRAJ_RECORD" --batch 3 --watch 1800 \
+    --root "$SCAN_ROOT" --record-id "$TRAJ_RECORD" --batch 3 --watch "$WATCH" \
     --archive-dir "$SCAN_ROOT/traj_archive" &
-supervise sync "$HERE/sync_postproc.sh" 1800 &
+supervise sync "$HERE/sync_postproc.sh" "$SYNC_INTERVAL" &
 wait
