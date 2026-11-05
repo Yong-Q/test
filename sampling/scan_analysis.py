@@ -384,9 +384,13 @@ def analyze_state(traj, species, outdir, n_frames=200, rdf_frames=20,
 # discovery + aggregation
 # ----------------------------------------------------------------------------
 def _parse_sim_id(sid):
-    """H2O-PRL-T1003-r07-0.012345 -> (species, T, rho)."""
+    """H2O-PRL-T1003-r07-0.012345 or H2O_rho0.012345_T1003.0K -> (species, T, rho)."""
     if "__" in sid:                      # partial_attempt-04/shard1__H2O-...
         sid = sid.split("__", 1)[1]
+    # gas + density + temperature naming
+    m = re.match(r"^([A-Za-z][A-Za-z0-9]*)_rho([0-9.]+)_T([0-9.]+)K$", sid)
+    if m:
+        return m.group(1), float(m.group(3)), float(m.group(2))
     sp = sid.split("-")[0]
     temp = rho = 0.0
     m = re.search(r"-T([0-9.]+)-", sid)
